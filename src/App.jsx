@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useWallet } from './hooks/useWallet';
-import { useContract } from './hooks/useContract';
+import { useContractV2 as useContract } from './hooks/useContractV2';
 import { useGoldPrice } from './hooks/useGoldPrice';
 import WalletConnection from './components/WalletConnection';
 import GoldPriceDisplay from './components/GoldPriceDisplay';
@@ -27,6 +27,7 @@ function App() {
     tokenInfo,
     isLoading: contractLoading,
     error: contractError,
+    isTransactionPending,
     loadContractData,
     mintTokens,
     burnTokens
@@ -105,6 +106,7 @@ function App() {
               tokenInfo={tokenInfo}
               isLoading={contractLoading}
               error={contractError}
+              isTransactionPending={isTransactionPending}
               mintTokens={mintTokens}
               burnTokens={burnTokens}
               loadContractData={loadContractData}

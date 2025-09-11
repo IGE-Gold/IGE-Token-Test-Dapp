@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Coins, Plus, Minus, RefreshCw } from 'lucide-react';
+import TransactionLogger from './TransactionLogger';
 
 const TokenManager = ({ 
   contractAddress,
@@ -9,6 +10,7 @@ const TokenManager = ({
   tokenInfo,
   isLoading,
   error,
+  isTransactionPending,
   mintTokens,
   burnTokens,
   loadContractData,
@@ -18,8 +20,6 @@ const TokenManager = ({
   const [burnAmount, setBurnAmount] = useState('');
   const [mintToAddress, setMintToAddress] = useState('');
   const [burnFromAddress, setBurnFromAddress] = useState('');
-  const [isMinting, setIsMinting] = useState(false);
-  const [isBurning, setIsBurning] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [transactionDetails, setTransactionDetails] = useState(null);
 
@@ -36,7 +36,6 @@ const TokenManager = ({
     if (!mintAmount || parseFloat(mintAmount) <= 0 || !mintToAddress) return;
 
     try {
-      setIsMinting(true);
       setSuccessMessage('');
       setTransactionDetails(null);
       
@@ -59,8 +58,6 @@ const TokenManager = ({
       setMintAmount('');
     } catch (err) {
       console.error('Errore nel mint:', err);
-    } finally {
-      setIsMinting(false);
     }
   };
 
@@ -69,7 +66,6 @@ const TokenManager = ({
     if (!burnAmount || parseFloat(burnAmount) <= 0 || !burnFromAddress) return;
 
     try {
-      setIsBurning(true);
       setSuccessMessage('');
       setTransactionDetails(null);
       
@@ -92,8 +88,6 @@ const TokenManager = ({
       setBurnAmount('');
     } catch (err) {
       console.error('Errore nel burn:', err);
-    } finally {
-      setIsBurning(false);
     }
   };
 
@@ -103,6 +97,9 @@ const TokenManager = ({
         <Coins size={16} style={{ display: 'inline', marginRight: '6px' }} />
         Dashboard Blockchain Testnet Polygon
       </h2>
+      
+      {/* Logger delle transazioni */}
+      <TransactionLogger />
 
       {/* Input per l'indirizzo del contratto */}
       <div className="input-group">
@@ -268,16 +265,8 @@ const TokenManager = ({
             {isLoading ? (
               <span className="loading"></span>
             ) : (
-              `${parseFloat(totalSupply).toLocaleString()} ${tokenInfo.symbol || 'TOKEN'}`
+              `${parseFloat(totalSupply).toLocaleString()} grammi`
             )}
-          </div>
-          <div style={{ 
-            fontSize: '10px', 
-            color: 'var(--ige-gray)', 
-            marginTop: '4px',
-            fontStyle: 'italic'
-          }}>
-            Unità di misura: grammi
           </div>
         </div>
         
@@ -329,7 +318,7 @@ const TokenManager = ({
               value={mintToAddress}
               onChange={(e) => setMintToAddress(e.target.value)}
               placeholder="0x..."
-              disabled={isMinting || !contractAddress}
+              disabled={isTransactionPending || !contractAddress}
               style={{ fontFamily: 'Courier New, monospace', fontSize: '11px' }}
             />
           </div>
@@ -342,7 +331,7 @@ const TokenManager = ({
               value={mintAmount}
               onChange={(e) => setMintAmount(e.target.value)}
               placeholder="Inserisci la quantità"
-              disabled={isMinting || !contractAddress}
+              disabled={isTransactionPending || !contractAddress}
             />
             <div style={{ 
               fontSize: '10px', 
@@ -356,10 +345,10 @@ const TokenManager = ({
           <button 
             type="submit" 
             className="button success"
-            disabled={isMinting || !contractAddress || !mintAmount || !mintToAddress}
+            disabled={isTransactionPending || !contractAddress || !mintAmount || !mintToAddress}
           >
             <Plus size={10} style={{ marginRight: '4px' }} />
-            {isMinting ? 'Minting...' : 'Mint Token'}
+            {isTransactionPending ? 'Transazione in corso...' : 'Mint Token'}
           </button>
         </form>
         </div>
@@ -375,7 +364,7 @@ const TokenManager = ({
               value={burnFromAddress}
               onChange={(e) => setBurnFromAddress(e.target.value)}
               placeholder="0x..."
-              disabled={isBurning || !contractAddress}
+              disabled={isTransactionPending || !contractAddress}
               style={{ fontFamily: 'Courier New, monospace', fontSize: '11px' }}
             />
           </div>
@@ -388,7 +377,7 @@ const TokenManager = ({
               value={burnAmount}
               onChange={(e) => setBurnAmount(e.target.value)}
               placeholder="Inserisci la quantità"
-              disabled={isBurning || !contractAddress}
+              disabled={isTransactionPending || !contractAddress}
             />
             <div style={{ 
               fontSize: '10px', 
@@ -402,10 +391,10 @@ const TokenManager = ({
           <button 
             type="submit" 
             className="button danger"
-            disabled={isBurning || !contractAddress || !burnAmount || !burnFromAddress}
+            disabled={isTransactionPending || !contractAddress || !burnAmount || !burnFromAddress}
           >
             <Minus size={10} style={{ marginRight: '4px' }} />
-            {isBurning ? 'Burning...' : 'Burn Token'}
+            {isTransactionPending ? 'Transazione in corso...' : 'Burn Token'}
           </button>
         </form>
         </div>
