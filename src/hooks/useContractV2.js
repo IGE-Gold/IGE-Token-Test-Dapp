@@ -52,6 +52,17 @@ export const useContractV2 = (contractAddress, signer) => {
         // Testa immediatamente se il contratto risponde
         contractInstance.name().then(name => {
           logger.info('Contratto risponde correttamente', { name });
+          
+          // Testa se le funzioni mint/burn esistono realmente
+          return Promise.all([
+            contractInstance.mint.staticCall('0x0000000000000000000000000000000000000000', 0).catch(() => null),
+            contractInstance.burn.staticCall('0x0000000000000000000000000000000000000000', 0).catch(() => null)
+          ]);
+        }).then(([mintResult, burnResult]) => {
+          logger.info('Test funzioni contratto', { 
+            mintAvailable: mintResult !== null,
+            burnAvailable: burnResult !== null
+          });
         }).catch(err => {
           logger.error('Contratto non risponde alle chiamate', { error: err.message });
         });
@@ -211,6 +222,26 @@ export const useContractV2 = (contractAddress, signer) => {
       const network = await signer.provider.getNetwork();
       logger.info('Rete corrente', { chainId: network.chainId.toString(), name: network.name });
       
+      // Verifica se la rete è corretta (Polygon Amoy = 80002)
+      if (network.chainId !== 80002n) {
+        logger.warn('Rete non corretta per il contratto', { 
+          expected: '80002 (Polygon Amoy)', 
+          actual: network.chainId.toString() 
+        });
+      }
+      
+      // Verifica il gas price della rete
+      try {
+        const feeData = await signer.provider.getFeeData();
+        logger.info('Dati gas rete', {
+          gasPrice: feeData.gasPrice?.toString(),
+          maxFeePerGas: feeData.maxFeePerGas?.toString(),
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas?.toString()
+        });
+      } catch (feeErr) {
+        logger.warn('Impossibile ottenere dati gas', { error: feeErr.message });
+      }
+      
       // Stima il gas
       const gasLimit = await estimateGasSafely(method, ...args);
       
@@ -221,11 +252,13 @@ export const useContractV2 = (contractAddress, signer) => {
       
       logger.info(`Gas limit finale: ${gasLimit.toString()}`);
       
-      // Esegui la transazione con timeout
+      // Esegui la transazione con parametri ottimizzati
       const tx = await method(...args, { 
         gasLimit,
         gasPrice: undefined, // Lascia che MetaMask calcoli il gas price
-        timeout: 120000 // 2 minuti timeout
+        timeout: 120000, // 2 minuti timeout
+        maxFeePerGas: undefined, // Usa EIP-1559 se supportato
+        maxPriorityFeePerGas: undefined // Usa EIP-1559 se supportato
       });
       logger.info(`Transazione ${transactionName} inviata`, { txHash: tx.hash });
       
@@ -413,11 +446,26 @@ export const useContractV2 = (contractAddress, signer) => {
       if (canBurn) {
         try {
           logger.info('Tentativo burn diretto con gas limit alto');
-          const tx = await executeTransaction(
-            contract.burn,
-            [fromAddress, amountWei],
-            'burn'
-          );
+          
+          // Prova prima con i parametri standard
+          let tx;
+          try {
+            tx = await executeTransaction(
+              contract.burn,
+              [fromAddress, amountWei],
+              'burn'
+            );
+          } catch (firstError) {
+            logger.warn('Primo tentativo burn fallito, provo con parametri diversi', { error: firstError.message });
+            
+            // Prova con solo l'amount (alcuni contratti burn solo dal msg.sender)
+            tx = await executeTransaction(
+              contract.burn,
+              [amountWei],
+              'burn_amount_only'
+            );
+          }
+          
           logger.info('Burn completato con successo', { amount, fromAddress });
           return tx;
         } catch (burnError) {
