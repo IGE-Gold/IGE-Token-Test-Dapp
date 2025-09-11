@@ -145,7 +145,7 @@ export const useContractV2 = (contractAddress, signer) => {
       const receipt = await tx.wait();
       logger.info(`Transazione ${transactionName} confermata`, { 
         txHash: tx.hash,
-        blockNumber: receipt.blockNumber,
+        blockNumber: receipt.blockNumber.toString(),
         gasUsed: receipt.gasUsed.toString()
       });
 
@@ -154,9 +154,9 @@ export const useContractV2 = (contractAddress, signer) => {
       
       logTransaction(transactionName, {
         txHash: tx.hash,
-        blockNumber: receipt.blockNumber,
+        blockNumber: receipt.blockNumber.toString(),
         gasUsed: receipt.gasUsed.toString(),
-        args
+        args: args.map(arg => typeof arg === 'bigint' ? arg.toString() : arg)
       });
 
       return tx;

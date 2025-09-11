@@ -7,11 +7,27 @@ class TransactionLogger {
 
   log(level, message, data = null) {
     const timestamp = new Date().toISOString();
+    
+    // Funzione per convertire BigInt in stringhe prima della serializzazione
+    const convertBigIntToString = (obj) => {
+      if (obj === null || obj === undefined) return obj;
+      if (typeof obj === 'bigint') return obj.toString();
+      if (Array.isArray(obj)) return obj.map(convertBigIntToString);
+      if (typeof obj === 'object') {
+        const converted = {};
+        for (const [key, value] of Object.entries(obj)) {
+          converted[key] = convertBigIntToString(value);
+        }
+        return converted;
+      }
+      return obj;
+    };
+    
     const logEntry = {
       timestamp,
       level,
       message,
-      data: data ? JSON.stringify(data, null, 2) : null
+      data: data ? JSON.stringify(convertBigIntToString(data), null, 2) : null
     };
     
     this.logs.unshift(logEntry);
@@ -62,21 +78,51 @@ export const logger = new TransactionLogger();
 
 // Funzione helper per log delle transazioni
 export const logTransaction = (action, data) => {
+  // Converti BigInt in stringhe prima del log
+  const convertBigInt = (obj) => {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj === 'bigint') return obj.toString();
+    if (Array.isArray(obj)) return obj.map(convertBigInt);
+    if (typeof obj === 'object') {
+      const converted = {};
+      for (const [key, value] of Object.entries(obj)) {
+        converted[key] = convertBigInt(value);
+      }
+      return converted;
+    }
+    return obj;
+  };
+
   logger.info(`Transazione ${action}`, {
     action,
     timestamp: new Date().toISOString(),
-    ...data
+    ...convertBigInt(data)
   });
 };
 
 // Funzione helper per log degli errori
 export const logError = (action, error, context = {}) => {
+  // Converti BigInt in stringhe prima del log
+  const convertBigInt = (obj) => {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj === 'bigint') return obj.toString();
+    if (Array.isArray(obj)) return obj.map(convertBigInt);
+    if (typeof obj === 'object') {
+      const converted = {};
+      for (const [key, value] of Object.entries(obj)) {
+        converted[key] = convertBigInt(value);
+      }
+      return converted;
+    }
+    return obj;
+  };
+
   logger.error(`Errore in ${action}`, {
     action,
     error: error.message,
     errorCode: error.code,
     errorData: error.data,
     stack: error.stack,
-    context
+    context: convertBigInt(context)
   });
 };
