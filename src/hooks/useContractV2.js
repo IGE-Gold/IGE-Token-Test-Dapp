@@ -58,6 +58,35 @@ export const useContractV2 = (contractAddress, signer) => {
     }
   }, [contractAddress, signer]);
 
+  // Verifica che il contratto abbia le funzioni necessarie
+  const verifyContractFunctions = useCallback(async () => {
+    if (!contract) return false;
+    
+    try {
+      // Verifica che le funzioni esistano
+      const hasMint = typeof contract.mint === 'function';
+      const hasBurn = typeof contract.burn === 'function';
+      const hasTotalSupply = typeof contract.totalSupply === 'function';
+      const hasBalanceOf = typeof contract.balanceOf === 'function';
+      
+      logger.info('Verifica funzioni contratto', {
+        hasMint,
+        hasBurn,
+        hasTotalSupply,
+        hasBalanceOf
+      });
+      
+      if (!hasMint || !hasBurn || !hasTotalSupply || !hasBalanceOf) {
+        throw new Error('Contratto non supporta le funzioni richieste');
+      }
+      
+      return true;
+    } catch (err) {
+      logger.error('Errore nella verifica del contratto', err);
+      return false;
+    }
+  }, [contract]);
+
   // Carica i dati del contratto
   const loadContractData = useCallback(async () => {
     if (!contract || !signer) {
@@ -70,6 +99,12 @@ export const useContractV2 = (contractAddress, signer) => {
 
     try {
       logger.info('Inizio caricamento dati contratto');
+      
+      // Verifica le funzioni del contratto
+      const contractValid = await verifyContractFunctions();
+      if (!contractValid) {
+        throw new Error('Contratto non valido o non supporta le funzioni richieste');
+      }
       
       const [name, symbol, decimals, totalSupplyValue, userAddress] = await Promise.all([
         contract.name(),
@@ -99,24 +134,41 @@ export const useContractV2 = (contractAddress, signer) => {
     } finally {
       setIsLoading(false);
     }
-  }, [contract, signer, contractAddress]);
+  }, [contract, signer, contractAddress, verifyContractFunctions]);
 
   // Funzione per stimare il gas in modo sicuro
   const estimateGasSafely = useCallback(async (method, ...args) => {
     try {
       logger.debug('Stima gas per metodo', { method: method.name, args });
+      
+      // Prova prima con una stima base
       const gasEstimate = await method.estimateGas(...args);
-      const gasLimit = gasEstimate * 120n / 100n; // 20% buffer
+      const gasLimit = gasEstimate * 150n / 100n; // 50% buffer per sicurezza
+      
+      // Assicurati che il gas limit sia almeno 100,000
+      const minGasLimit = 100000n;
+      const finalGasLimit = gasLimit > minGasLimit ? gasLimit : minGasLimit;
+      
       logger.info('Gas stimato con successo', { 
         gasEstimate: gasEstimate.toString(), 
-        gasLimit: gasLimit.toString() 
+        gasLimit: finalGasLimit.toString() 
       });
-      return gasLimit;
+      return finalGasLimit;
     } catch (err) {
       logger.warn('Errore nella stima gas, uso gas fisso', { error: err.message });
-      // Gas limit fisso basato sulla quantità
+      
+      // Gas limit fisso più alto per sicurezza
       const amount = args[1] ? ethers.formatUnits(args[1], tokenInfo.decimals) : 0;
-      const gasLimit = parseFloat(amount) <= 1 ? 500000n : 300000n;
+      let gasLimit;
+      
+      if (parseFloat(amount) <= 1) {
+        gasLimit = 800000n; // Gas molto alto per 1 token
+      } else if (parseFloat(amount) <= 100) {
+        gasLimit = 600000n; // Gas alto per quantità medie
+      } else {
+        gasLimit = 400000n; // Gas normale per quantità grandi
+      }
+      
       logger.info('Usando gas limit fisso', { gasLimit: gasLimit.toString() });
       return gasLimit;
     }
@@ -134,8 +186,29 @@ export const useContractV2 = (contractAddress, signer) => {
     try {
       logger.info(`Inizio transazione ${transactionName}`, { args });
       
+      // Verifica che il contratto sia valido
+      if (!contract) {
+        throw new Error('Contratto non inizializzato');
+      }
+      
+      // Verifica che il signer sia valido
+      if (!signer) {
+        throw new Error('Wallet non connesso');
+      }
+      
+      // Verifica la rete
+      const network = await signer.provider.getNetwork();
+      logger.info('Rete corrente', { chainId: network.chainId.toString(), name: network.name });
+      
       // Stima il gas
       const gasLimit = await estimateGasSafely(method, ...args);
+      
+      // Verifica che il gas limit sia ragionevole
+      if (gasLimit < 21000n) {
+        throw new Error('Gas limit troppo basso per la transazione');
+      }
+      
+      logger.info(`Gas limit finale: ${gasLimit.toString()}`);
       
       // Esegui la transazione
       const tx = await method(...args, { gasLimit });
@@ -168,6 +241,27 @@ export const useContractV2 = (contractAddress, signer) => {
     }
   }, [isTransactionPending, estimateGasSafely, loadContractData]);
 
+  // Testa la connessione al contratto
+  const testContractConnection = useCallback(async () => {
+    if (!contract || !signer) {
+      throw new Error('Contratto o wallet non connesso');
+    }
+
+    try {
+      logger.info('Test connessione contratto');
+      
+      // Prova a chiamare una funzione view (non costa gas)
+      const name = await contract.name();
+      const symbol = await contract.symbol();
+      
+      logger.info('Connessione contratto OK', { name, symbol });
+      return true;
+    } catch (err) {
+      logger.error('Errore connessione contratto', err);
+      throw new Error(`Contratto non raggiungibile: ${err.message}`);
+    }
+  }, [contract, signer]);
+
   // Mint tokens
   const mintTokens = useCallback(async (amount, toAddress) => {
     if (!contract || !signer) {
@@ -180,6 +274,9 @@ export const useContractV2 = (contractAddress, signer) => {
 
     try {
       logger.info('Inizio mint tokens', { amount, toAddress });
+      
+      // Testa la connessione prima di procedere
+      await testContractConnection();
       
       const amountWei = ethers.parseUnits(amount.toString(), tokenInfo.decimals);
       
@@ -201,7 +298,7 @@ export const useContractV2 = (contractAddress, signer) => {
       setError(errorMessage);
       throw err;
     }
-  }, [contract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction]);
+  }, [contract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction, testContractConnection]);
 
   // Burn tokens
   const burnTokens = useCallback(async (amount, fromAddress) => {
@@ -215,6 +312,9 @@ export const useContractV2 = (contractAddress, signer) => {
 
     try {
       logger.info('Inizio burn tokens', { amount, fromAddress });
+      
+      // Testa la connessione prima di procedere
+      await testContractConnection();
       
       const amountWei = ethers.parseUnits(amount.toString(), tokenInfo.decimals);
       
@@ -243,7 +343,7 @@ export const useContractV2 = (contractAddress, signer) => {
       setError(errorMessage);
       throw err;
     }
-  }, [contract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction]);
+  }, [contract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction, testContractConnection]);
 
   // Carica i dati quando il contratto è pronto
   useEffect(() => {
