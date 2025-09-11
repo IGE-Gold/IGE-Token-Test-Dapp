@@ -1,166 +1,154 @@
-# IGE GOLD - Token Lab | Testnet Demo
+# IGE Token Test DApp
 
-Una webapp moderna per testare e gestire il token IGE sulla testnet Amoy di Polygon, con integrazione MetaMask e monitoraggio prezzi oro in tempo reale. Design ispirato al brand IGE GOLD con interfaccia elegante e responsive.
+A React-based decentralized application (DApp) that allows users to connect their wallet and test the main functions of the IGE Token smart contract deployed on a blockchain testnet.
 
-## 🚀 Funzionalità
+## 🚀 Features
 
-- **🎨 Design IGE GOLD**: Interfaccia elegante ispirata al brand IGE GOLD
-- **🔗 Connessione MetaMask**: Collegamento sicuro al wallet MetaMask con stato visivo
-- **💰 Gestione Token IGE**: Visualizzazione balance, mint e burn di token
-- **📝 Input Contratto Dinamico**: Inserisci l'indirizzo del contratto senza modificare il codice
-- **📈 Prezzi Oro in Tempo Reale**: Monitoraggio prezzi oro in USD ed EUR
-- **🌐 Testnet Amoy**: Configurazione automatica per la rete Polygon Amoy
-- **📱 Mobile First**: Interfaccia completamente responsive e ottimizzata per mobile
-- **✨ Animazioni**: Transizioni fluide e feedback visivo moderno
+- **🔗 Wallet Connection**: Secure MetaMask integration with visual connection status
+- **💰 Token Management**: View balance, mint and burn IGE tokens
+- **📝 Dynamic Contract Input**: Enter contract address without modifying code
+- **📈 Real-time Gold Prices**: Live gold price monitoring in USD and EUR
+- **🌐 Testnet Ready**: Automatic configuration for blockchain testnet
+- **📱 Mobile First**: Fully responsive interface optimized for mobile
+- **✨ Smooth Animations**: Fluid transitions and modern visual feedback
 
-## 📋 Prerequisiti
+## 🎯 Purpose
 
-- Node.js (versione 16 o superiore)
-- MetaMask installato nel browser
-- Token MATIC sulla testnet Amoy per le transazioni
+This project was developed to provide a user-friendly interface for testing the IGE Token smart contract before mainnet deployment. It is intended for development, learning, and demonstration purposes.
 
-## 🛠️ Installazione
+## 📋 Prerequisites
 
-1. **Clona il repository**
+- Node.js (version 16 or higher)
+- MetaMask installed in browser
+- Test tokens for gas fees on the testnet
+
+## 🛠️ Installation
+
+1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd ige-token-lab
+   git clone https://github.com/IGE-Gold/IGE-Token-Test-Dapp.git
+   cd IGE-Token-Test-Dapp
    ```
 
-2. **Installa le dipendenze**
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-3. **Avvia l'applicazione in modalità sviluppo**
+3. **Start the development server**
    ```bash
    npm run dev
    ```
 
-4. **Apri il browser**
-   - Vai su `http://localhost:3000`
-   - L'applicazione si aprirà automaticamente
+4. **Open your browser**
+   - Navigate to `http://localhost:3000`
+   - The application will open automatically
 
-## 🔧 Configurazione MetaMask
+## 🔧 MetaMask Configuration
 
-### Aggiunta della Rete Amoy
+### Adding the Testnet
 
-L'applicazione aggiungerà automaticamente la rete Amoy, ma puoi configurarla manualmente:
+The application will automatically add the testnet, but you can configure it manually:
 
-- **Nome Rete**: Polygon Amoy Testnet
-- **RPC URL**: `https://rpc-amoy.polygon.technology/`
-- **Chain ID**: `80002`
-- **Simbolo**: `MATIC`
-- **Explorer**: `https://amoy.polygonscan.com/`
+- **Network Name**: [Your Testnet Name]
+- **RPC URL**: `[Your Testnet RPC URL]`
+- **Chain ID**: `[Your Chain ID]`
+- **Symbol**: `[Your Token Symbol]`
+- **Explorer**: `[Your Block Explorer URL]`
 
-### Ottenere MATIC di Test
+### Getting Test Tokens
 
-1. Vai su [Polygon Faucet](https://faucet.polygon.technology/)
-2. Seleziona "Amoy Testnet"
-3. Inserisci il tuo indirizzo wallet
-4. Richiedi MATIC di test
+1. Visit the testnet faucet
+2. Select your testnet
+3. Enter your wallet address
+4. Request test tokens
 
-## 📱 Utilizzo
+## 📱 Usage
 
-### 1. Connessione Wallet
+### 1. Wallet Connection
 
-1. Clicca su "Connetti MetaMask"
-2. Autorizza la connessione nel popup MetaMask
-3. L'app passerà automaticamente alla rete Amoy
+1. Click "Connect MetaMask"
+2. Authorize the connection in the MetaMask popup
+3. The app will automatically switch to the testnet
 
-### 2. Gestione Token
+### 2. Token Management
 
-1. **Inserisci l'indirizzo del contratto** nel campo dedicato
-2. **Visualizza le statistiche**:
-   - Token totali mintati
-   - Il tuo balance personale
-   - Nome e simbolo del token
+1. **Enter the contract address** in the dedicated field
+2. **View statistics**:
+   - Total minted tokens
+   - Your personal balance
+   - Token name and symbol
 
-3. **Mint Token**:
-   - Inserisci la quantità da mintare
-   - Clicca su "Mint Token"
-   - Conferma la transazione in MetaMask
+3. **Mint Tokens**:
+   - Enter the amount to mint
+   - Click "Mint Token"
+   - Confirm the transaction in MetaMask
 
-4. **Burn Token**:
-   - Inserisci la quantità da burnare
-   - Clicca su "Burn Token"
-   - Conferma la transazione in MetaMask
+4. **Burn Tokens**:
+   - Enter the amount to burn
+   - Click "Burn Token"
+   - Confirm the transaction in MetaMask
 
-### 3. Monitoraggio Prezzi Oro
+### 3. Gold Price Monitoring
 
-- I prezzi vengono aggiornati automaticamente ogni 5 minuti
-- Clicca su "Aggiorna" per un refresh manuale
-- Visualizza prezzi in USD per oncia, USD per grammo, EUR per grammo
+- Prices are automatically updated every 5 minutes
+- Click "Refresh" for manual update
+- View prices in USD per ounce, USD per gram, EUR per gram
 
-## 🏗️ Struttura del Progetto
+## 🏗️ Project Structure
 
 ```
 src/
 ├── components/
-│   ├── WalletConnection.jsx    # Componente connessione wallet
-│   ├── GoldPriceDisplay.jsx    # Display prezzi oro
-│   └── TokenManager.jsx        # Gestione token IGE
+│   ├── WalletConnection.jsx    # Wallet connection component
+│   ├── GoldPriceDisplay.jsx    # Gold price display
+│   └── TokenManager.jsx        # IGE token management
 ├── hooks/
-│   ├── useWallet.js           # Hook per gestione wallet
-│   ├── useContract.js         # Hook per interazione contratto
-│   └── useGoldPrice.js        # Hook per prezzi oro
-├── App.jsx                    # Componente principale
+│   ├── useWallet.js           # Wallet management hook
+│   ├── useContract.js         # Contract interaction hook
+│   └── useGoldPrice.js        # Gold price hook
+├── App.jsx                    # Main component
 ├── main.jsx                   # Entry point
-└── index.css                  # Stili globali
+└── index.css                  # Global styles
 ```
 
-## 🔒 Sicurezza
+## 🔒 Security
 
-- **Testnet Only**: L'app è configurata per funzionare solo sulla testnet Amoy
-- **Validazione Input**: Tutti gli input vengono validati prima dell'invio
-- **Gestione Errori**: Errori dettagliati per debugging sicuro
-- **Non-Custodial**: Le chiavi private rimangono sempre nel tuo wallet
+- **Testnet Only**: App is configured to work only on testnet
+- **Input Validation**: All inputs are validated before submission
+- **Error Handling**: Detailed errors for safe debugging
+- **Non-Custodial**: Private keys always remain in your wallet
 
-## 🐛 Risoluzione Problemi
+## 🐛 Troubleshooting
 
-### MetaMask non si connette
-- Assicurati che MetaMask sia installato e sbloccato
-- Controlla che la rete sia impostata su Amoy Testnet
-- Ricarica la pagina e riprova
+### MetaMask won't connect
+- Ensure MetaMask is installed and unlocked
+- Check that the network is set to the correct testnet
+- Reload the page and try again
 
-### Transazioni falliscono
-- Verifica di avere abbastanza MATIC per le gas fees
-- Controlla che l'indirizzo del contratto sia corretto
-- Assicurati che il contratto supporti le funzioni mint/burn
+### Transactions fail
+- Verify you have enough test tokens for gas fees
+- Check that the contract address is correct
+- Ensure the contract supports mint/burn functions
 
-### Prezzi oro non si aggiornano
-- Controlla la connessione internet
-- Clicca su "Aggiorna" per un refresh manuale
-- L'app mostrerà prezzi di esempio in caso di errore API
+### Gold prices not updating
+- Check your internet connection
+- Click "Refresh" for manual update
+- App will show example prices if API fails
 
-## 📝 Note Tecniche
+## 📝 Tech Stack
 
-- **Framework**: React 18 con Vite
-- **Blockchain**: Polygon Amoy Testnet
+- **Framework**: React 18 with Vite
+- **Blockchain**: Testnet (configurable)
 - **Wallet**: MetaMask (ethers.js v6)
-- **API Prezzi**: metals.live (con fallback)
-- **Styling**: CSS moderno con gradienti e animazioni
+- **Price API**: metals.live (with fallback)
+- **Styling**: Modern CSS with gradients and animations
 
-## 🤝 Contributi
+## License
 
-I contributi sono benvenuti! Per favore:
-
-1. Fork del repository
-2. Crea un branch per la tua feature
-3. Commit delle modifiche
-4. Push al branch
-5. Apri una Pull Request
-
-## 📄 Licenza
-
-Questo progetto è rilasciato sotto licenza MIT. Vedi il file `LICENSE` per i dettagli.
-
-## 🆘 Supporto
-
-Per supporto o domande:
-- Apri una issue su GitHub
-- Contatta il team di sviluppo
+All rights reserved.
+This project is proprietary and may not be copied, modified, or distributed without explicit permission.
 
 ---
 
-**⚠️ Disclaimer**: Questa applicazione è per scopi educativi e di test. Usa sempre la testnet per i test e non inviare mai fondi reali a indirizzi di test.
+**⚠️ Disclaimer**: This application is for educational and testing purposes. Always use testnet for testing and never send real funds to test addresses.
