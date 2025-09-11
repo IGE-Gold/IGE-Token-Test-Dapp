@@ -48,6 +48,13 @@ export const useContractV2 = (contractAddress, signer) => {
         setContract(contractInstance);
         setError(null);
         logger.info('Contratto inizializzato con successo');
+        
+        // Testa immediatamente se il contratto risponde
+        contractInstance.name().then(name => {
+          logger.info('Contratto risponde correttamente', { name });
+        }).catch(err => {
+          logger.error('Contratto non risponde alle chiamate', { error: err.message });
+        });
       } catch (err) {
         const errorMsg = 'Indirizzo contratto non valido';
         setError(errorMsg);
@@ -364,18 +371,61 @@ export const useContractV2 = (contractAddress, signer) => {
         throw new Error(`Saldo insufficiente: ${ethers.formatUnits(userBalance, tokenInfo.decimals)} token disponibili`);
       }
 
-      // Prova prima con un approccio diverso - usa transfer a address(0) invece di burn
+      // CONTROLLO SPECIFICO: Verifica permessi e stato del contratto
+      let canBurn = false;
       try {
-        logger.info('Tentativo burn diretto');
-        const tx = await executeTransaction(
-          contract.burn,
-          [fromAddress, amountWei],
-          'burn'
-        );
-        logger.info('Burn completato con successo', { amount, fromAddress });
-        return tx;
-      } catch (burnError) {
-        logger.warn('Burn diretto fallito, provo con transfer a address(0)', { error: burnError.message });
+        // Verifica se il contratto è in pausa
+        const isPaused = await contract.paused();
+        logger.info('Stato pausa contratto per burn', { isPaused });
+        
+        if (isPaused) {
+          logger.warn('Contratto in pausa, tentativo di unpause');
+          try {
+            // Prova a fare unpause se l'utente ha i permessi
+            const unpauseTx = await contract.unpause();
+            await unpauseTx.wait();
+            logger.info('Contratto unpaused con successo');
+          } catch (unpauseErr) {
+            logger.error('Impossibile fare unpause', { error: unpauseErr.message });
+            throw new Error('Contratto in pausa e impossibile fare unpause - burn non disponibile');
+          }
+        }
+        
+        // Verifica i ruoli dell'utente
+        const userAddress = await signer.getAddress();
+        const adminRole = await contract.DEFAULT_ADMIN_ROLE();
+        const hasAdminRole = await contract.hasRole(adminRole, userAddress);
+        logger.info('Ruoli utente per burn', { userAddress, hasAdminRole });
+        
+        // Prova a fare una chiamata statica per vedere se la funzione funziona
+        await contract.burn.staticCall(fromAddress, 0);
+        canBurn = true;
+        logger.info('Funzione burn verificata e permessi OK');
+      } catch (err) {
+        logger.error('Problema con funzione burn', { 
+          error: err.message,
+          isPaused: err.message.includes('paused'),
+          noPermission: err.message.includes('role') || err.message.includes('permission')
+        });
+        canBurn = false;
+      }
+
+      if (canBurn) {
+        try {
+          logger.info('Tentativo burn diretto con gas limit alto');
+          const tx = await executeTransaction(
+            contract.burn,
+            [fromAddress, amountWei],
+            'burn'
+          );
+          logger.info('Burn completato con successo', { amount, fromAddress });
+          return tx;
+        } catch (burnError) {
+          logger.error('Burn diretto fallito nonostante verifica', { error: burnError.message });
+          throw burnError;
+        }
+      } else {
+        logger.info('Funzione burn non disponibile, uso transfer a address(0)');
         
         // Fallback: usa transfer a address(0) per simulare burn
         const zeroAddress = '0x0000000000000000000000000000000000000000';
@@ -389,7 +439,17 @@ export const useContractV2 = (contractAddress, signer) => {
         return tx;
       }
     } catch (err) {
-      const errorMessage = `Errore nel burn: ${err.message}`;
+      let errorMessage = `Errore nel burn: ${err.message}`;
+      
+      // Messaggi di errore più specifici
+      if (err.message.includes('Internal JSON-RPC error')) {
+        errorMessage = '❌ Errore del contratto: Il contratto potrebbe non supportare la funzione burn o essere in pausa. Prova a usare transfer a address(0) come alternativa.';
+      } else if (err.message.includes('execution reverted')) {
+        errorMessage = '❌ Transazione rifiutata: Il contratto ha rifiutato la transazione. Verifica i permessi e lo stato del contratto.';
+      } else if (err.message.includes('insufficient funds')) {
+        errorMessage = '❌ Fondi insufficienti: Non hai abbastanza MATIC per pagare il gas.';
+      }
+      
       setError(errorMessage);
       throw err;
     }
