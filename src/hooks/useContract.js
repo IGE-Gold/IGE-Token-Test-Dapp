@@ -226,17 +226,24 @@ export const useContract = (contractAddress, signer) => {
         throw new Error('Non hai i permessi per fare il burn. Contatta l\'amministratore del contratto.');
       }
 
-      // Controlla e rimuovi la pausa prima del burn
-      await checkAndUnpause();
+      // NON chiamare checkAndUnpause() qui per evitare doppia transazione
+      // Il burn dovrebbe funzionare anche se il token è in pausa
 
       const amountWei = ethers.parseUnits(amount.toString(), tokenInfo.decimals);
+      
+      // Verifica che l'utente abbia abbastanza token da bruciare
+      const userAddress = await signer.getAddress();
+      const userBalance = await contract.balanceOf(userAddress);
+      if (userBalance < amountWei) {
+        throw new Error(`Saldo insufficiente: Hai ${ethers.formatUnits(userBalance, tokenInfo.decimals)} token, stai tentando di bruciare ${amount}`);
+      }
       
       // Stima il gas prima della transazione
       try {
         const gasEstimate = await contract.burn.estimateGas(fromAddress, amountWei);
         const gasLimit = gasEstimate * 120n / 100n; // Aggiungi 20% di buffer
         
-        console.log(`Gas stimato: ${gasEstimate.toString()}, Gas limit: ${gasLimit.toString()}`);
+        console.log(`Gas stimato per burn: ${gasEstimate.toString()}, Gas limit: ${gasLimit.toString()}`);
         
         const tx = await contract.burn(fromAddress, amountWei, {
           gasLimit: gasLimit
@@ -247,10 +254,12 @@ export const useContract = (contractAddress, signer) => {
         
         return tx;
       } catch (gasError) {
-        console.log('Errore nella stima del gas, provo con gas limit fisso:', gasError);
+        console.log('Errore nella stima del gas per burn, provo con gas limit fisso:', gasError);
         
         // Fallback: usa un gas limit fisso più alto per piccole quantità
         const gasLimit = amount <= 1 ? 500000n : 300000n; // Gas più alto per 1 token o meno
+        
+        console.log(`Usando gas limit fisso per burn: ${gasLimit.toString()}`);
         
         const tx = await contract.burn(fromAddress, amountWei, {
           gasLimit: gasLimit
