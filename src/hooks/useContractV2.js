@@ -138,44 +138,29 @@ export const useContractV2 = (contractAddress, signer) => {
 
   // Funzione per stimare il gas in modo sicuro
   const estimateGasSafely = useCallback(async (method, ...args) => {
-    try {
-      logger.debug('Stima gas per metodo', { method: method.name, args });
-      
-      // Prova prima con una stima base
-      const gasEstimate = await method.estimateGas(...args);
-      const gasLimit = gasEstimate * 150n / 100n; // 50% buffer per sicurezza
-      
-      // Assicurati che il gas limit sia almeno 100,000
-      const minGasLimit = 100000n;
-      const finalGasLimit = gasLimit > minGasLimit ? gasLimit : minGasLimit;
-      
-      logger.info('Gas stimato con successo', { 
-        gasEstimate: gasEstimate.toString(), 
-        gasLimit: finalGasLimit.toString() 
-      });
-      return finalGasLimit;
-    } catch (err) {
-      logger.warn('Errore nella stima gas, uso gas fisso', { error: err.message });
-      
-      // Gas limit fisso più alto per sicurezza
-      const amount = args[1] ? ethers.formatUnits(args[1], tokenInfo.decimals) : 0;
-      let gasLimit;
-      
-      if (parseFloat(amount) <= 1) {
-        gasLimit = 800000n; // Gas molto alto per 1 token
-      } else if (parseFloat(amount) <= 100) {
-        gasLimit = 600000n; // Gas alto per quantità medie
-      } else {
-        gasLimit = 400000n; // Gas normale per quantità grandi
-      }
-      
-      logger.info('Usando gas limit fisso', { gasLimit: gasLimit.toString() });
-      return gasLimit;
+    // NON usare mai la stima gas - usa sempre gas limit fissi alti
+    logger.info('Usando gas limit fisso per evitare errori RPC');
+    
+    const amount = args[1] ? ethers.formatUnits(args[1], tokenInfo.decimals) : 0;
+    let gasLimit;
+    
+    if (parseFloat(amount) <= 1) {
+      gasLimit = 1000000n; // 1M gas per 1 token - molto sicuro
+    } else if (parseFloat(amount) <= 100) {
+      gasLimit = 800000n; // 800k gas per quantità medie
+    } else {
+      gasLimit = 600000n; // 600k gas per quantità grandi
     }
+    
+    logger.info('Gas limit fisso applicato', { 
+      amount: parseFloat(amount),
+      gasLimit: gasLimit.toString() 
+    });
+    return gasLimit;
   }, [tokenInfo.decimals]);
 
-  // Funzione per eseguire transazioni in modo sicuro
-  const executeTransaction = useCallback(async (method, args, transactionName) => {
+  // Funzione per eseguire transazioni in modo sicuro con retry
+  const executeTransaction = useCallback(async (method, args, transactionName, retryCount = 0) => {
     if (isTransactionPending) {
       throw new Error('Transazione già in corso, attendere il completamento');
     }
@@ -184,7 +169,7 @@ export const useContractV2 = (contractAddress, signer) => {
     setError(null);
 
     try {
-      logger.info(`Inizio transazione ${transactionName}`, { args });
+      logger.info(`Inizio transazione ${transactionName} (tentativo ${retryCount + 1})`, { args });
       
       // Verifica che il contratto sia valido
       if (!contract) {
@@ -210,12 +195,16 @@ export const useContractV2 = (contractAddress, signer) => {
       
       logger.info(`Gas limit finale: ${gasLimit.toString()}`);
       
-      // Esegui la transazione
-      const tx = await method(...args, { gasLimit });
+      // Esegui la transazione con timeout
+      const tx = await method(...args, { 
+        gasLimit,
+        gasPrice: undefined, // Lascia che MetaMask calcoli il gas price
+        timeout: 120000 // 2 minuti timeout
+      });
       logger.info(`Transazione ${transactionName} inviata`, { txHash: tx.hash });
       
-      // Attendi conferma
-      const receipt = await tx.wait();
+      // Attendi conferma con timeout
+      const receipt = await tx.wait(1); // Attendi almeno 1 conferma
       logger.info(`Transazione ${transactionName} confermata`, { 
         txHash: tx.hash,
         blockNumber: receipt.blockNumber.toString(),
@@ -234,7 +223,14 @@ export const useContractV2 = (contractAddress, signer) => {
 
       return tx;
     } catch (err) {
-      logError(transactionName, err, { args });
+      // Se è un errore RPC e non abbiamo fatto troppi tentativi, riprova
+      if (err.message.includes('Internal JSON-RPC error') && retryCount < 2) {
+        logger.warn(`Errore RPC, riprovo (tentativo ${retryCount + 1})`, { error: err.message });
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Aspetta 2 secondi
+        return executeTransaction(method, args, transactionName, retryCount + 1);
+      }
+      
+      logError(transactionName, err, { args, retryCount });
       throw err;
     } finally {
       setIsTransactionPending(false);
