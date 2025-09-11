@@ -156,12 +156,37 @@ export const useContract = (contractAddress, signer) => {
       await checkAndUnpause();
 
       const amountWei = ethers.parseUnits(amount.toString(), tokenInfo.decimals);
-      const tx = await contract.mint(toAddress, amountWei);
       
-      await tx.wait();
-      await loadContractData(); // Ricarica i dati dopo il mint
-      
-      return tx;
+      // Stima il gas prima della transazione
+      try {
+        const gasEstimate = await contract.mint.estimateGas(toAddress, amountWei);
+        const gasLimit = gasEstimate * 120n / 100n; // Aggiungi 20% di buffer
+        
+        console.log(`Gas stimato: ${gasEstimate.toString()}, Gas limit: ${gasLimit.toString()}`);
+        
+        const tx = await contract.mint(toAddress, amountWei, {
+          gasLimit: gasLimit
+        });
+        
+        await tx.wait();
+        await loadContractData(); // Ricarica i dati dopo il mint
+        
+        return tx;
+      } catch (gasError) {
+        console.log('Errore nella stima del gas, provo con gas limit fisso:', gasError);
+        
+        // Fallback: usa un gas limit fisso più alto per piccole quantità
+        const gasLimit = amount <= 1 ? 500000n : 300000n; // Gas più alto per 1 token o meno
+        
+        const tx = await contract.mint(toAddress, amountWei, {
+          gasLimit: gasLimit
+        });
+        
+        await tx.wait();
+        await loadContractData();
+        
+        return tx;
+      }
     } catch (err) {
       let errorMessage = 'Errore nel mint: ';
       
@@ -205,12 +230,37 @@ export const useContract = (contractAddress, signer) => {
       await checkAndUnpause();
 
       const amountWei = ethers.parseUnits(amount.toString(), tokenInfo.decimals);
-      const tx = await contract.burn(fromAddress, amountWei);
       
-      await tx.wait();
-      await loadContractData(); // Ricarica i dati dopo il burn
-      
-      return tx;
+      // Stima il gas prima della transazione
+      try {
+        const gasEstimate = await contract.burn.estimateGas(fromAddress, amountWei);
+        const gasLimit = gasEstimate * 120n / 100n; // Aggiungi 20% di buffer
+        
+        console.log(`Gas stimato: ${gasEstimate.toString()}, Gas limit: ${gasLimit.toString()}`);
+        
+        const tx = await contract.burn(fromAddress, amountWei, {
+          gasLimit: gasLimit
+        });
+        
+        await tx.wait();
+        await loadContractData(); // Ricarica i dati dopo il burn
+        
+        return tx;
+      } catch (gasError) {
+        console.log('Errore nella stima del gas, provo con gas limit fisso:', gasError);
+        
+        // Fallback: usa un gas limit fisso più alto per piccole quantità
+        const gasLimit = amount <= 1 ? 500000n : 300000n; // Gas più alto per 1 token o meno
+        
+        const tx = await contract.burn(fromAddress, amountWei, {
+          gasLimit: gasLimit
+        });
+        
+        await tx.wait();
+        await loadContractData();
+        
+        return tx;
+      }
     } catch (err) {
       let errorMessage = 'Errore nel burn: ';
       

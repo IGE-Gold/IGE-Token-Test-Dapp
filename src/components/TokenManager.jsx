@@ -336,6 +336,14 @@ const TokenManager = ({
               placeholder="Inserisci la quantità"
               disabled={isMinting || !contractAddress}
             />
+            <div style={{ 
+              fontSize: '10px', 
+              color: 'var(--ige-gray)', 
+              marginTop: '4px',
+              fontStyle: 'italic'
+            }}>
+              💡 Per 1 token, il sistema usa automaticamente gas limit ottimizzato (500,000). Per quantità maggiori, il gas è stimato dinamicamente.
+            </div>
           </div>
           <button 
             type="submit" 
@@ -374,6 +382,14 @@ const TokenManager = ({
               placeholder="Inserisci la quantità"
               disabled={isBurning || !contractAddress}
             />
+            <div style={{ 
+              fontSize: '10px', 
+              color: 'var(--ige-gray)', 
+              marginTop: '4px',
+              fontStyle: 'italic'
+            }}>
+              💡 Per 1 token, il sistema usa automaticamente gas limit ottimizzato (500,000). Per quantità maggiori, il gas è stimato dinamicamente.
+            </div>
           </div>
           <button 
             type="submit" 
