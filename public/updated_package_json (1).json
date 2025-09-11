@@ -1,0 +1,61 @@
+{
+  "name": "ige-italy-gold-exchange",
+  "version": "1.0.0",
+  "description": "Italy Gold Exchange (IGE) - Gold-backed token with OpenZeppelin v5.0.2 and UUPS proxy",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:amoy": "hardhat run scripts/deploy/deploy-amoy.ts --network amoy",
+    "deploy:polygon": "hardhat run scripts/deploy/deploy-polygon.ts --network polygon",
+    "verify:amoy": "hardhat verify --network amoy",
+    "verify:polygon": "hardhat verify --network polygon",
+    "coverage": "hardhat coverage",
+    "gas-report": "REPORT_GAS=true hardhat test",
+    "node": "hardhat node",
+    "clean": "hardhat clean"
+  },
+  "keywords": [
+    "ethereum",
+    "polygon",
+    "gold-token",
+    "defi",
+    "chainlink",
+    "openzeppelin",
+    "uups",
+    "italy-gold-exchange"
+  ],
+  "author": "IGE-Gold",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.10",
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@openzeppelin/hardhat-upgrades": "^3.4.0",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "@types/node": "^22.7.4",
+    "hardhat": "^2.22.12",
+    "hardhat-gas-reporter": "^2.2.1",
+    "solidity-coverage": "^0.8.13",
+    "typescript": "^5.6.2",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "@chainlink/contracts": "^1.2.0",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@openzeppelin/contracts-upgradeable": "^5.0.2",
+    "ethers": "^6.13.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "peerDependencies": {
+    "ethers": "^6.0.0"
+  },
+  "resolutions": {
+    "ethers": "^6.13.2",
+    "hardhat-gas-reporter": "^1.0.10"
+  }
+}
