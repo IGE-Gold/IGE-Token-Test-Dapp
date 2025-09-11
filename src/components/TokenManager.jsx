@@ -263,7 +263,7 @@ const TokenManager = ({
       {/* Statistiche del token */}
       <div className="stats-grid">
         <div className="stat-card">
-          <h3>Token Totali Mintati</h3>
+          <h3>Riserva Aurea Tokenizzata</h3>
           <div className="value">
             {isLoading ? (
               <span className="loading"></span>
@@ -271,10 +271,18 @@ const TokenManager = ({
               `${parseFloat(totalSupply).toLocaleString()} ${tokenInfo.symbol || 'TOKEN'}`
             )}
           </div>
+          <div style={{ 
+            fontSize: '10px', 
+            color: 'var(--ige-gray)', 
+            marginTop: '4px',
+            fontStyle: 'italic'
+          }}>
+            Unità di misura: grammi
+          </div>
         </div>
         
         <div className="stat-card">
-          <h3>Il Tuo Balance</h3>
+          <h3>I Token nel Tuo Wallet</h3>
           <div className="value">
             {isLoading ? (
               <span className="loading"></span>

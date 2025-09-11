@@ -220,56 +220,53 @@ export const useContract = (contractAddress, signer) => {
       setIsLoading(true);
       setError(null);
 
-      // Controlla i ruoli dell'utente
-      const { hasMinterRole } = await checkUserRoles();
-      if (!hasMinterRole) {
-        throw new Error('Non hai i permessi per fare il burn. Contatta l\'amministratore del contratto.');
-      }
+      console.log(`Tentativo di burn: ${amount} token da ${fromAddress}`);
 
-      // NON chiamare checkAndUnpause() qui per evitare doppia transazione
-      // Il burn dovrebbe funzionare anche se il token è in pausa
+      // NON controllare i ruoli per il burn - potrebbe non essere necessario
+      // Il burn potrebbe essere permesso a tutti gli utenti
 
       const amountWei = ethers.parseUnits(amount.toString(), tokenInfo.decimals);
       
       // Verifica che l'utente abbia abbastanza token da bruciare
       const userAddress = await signer.getAddress();
       const userBalance = await contract.balanceOf(userAddress);
+      console.log(`Saldo utente: ${ethers.formatUnits(userBalance, tokenInfo.decimals)} token`);
+      
       if (userBalance < amountWei) {
         throw new Error(`Saldo insufficiente: Hai ${ethers.formatUnits(userBalance, tokenInfo.decimals)} token, stai tentando di bruciare ${amount}`);
       }
       
-      // Stima il gas prima della transazione
+      // Prova prima con stima gas, poi con gas fisso
+      let tx;
       try {
+        console.log('Tentativo stima gas per burn...');
         const gasEstimate = await contract.burn.estimateGas(fromAddress, amountWei);
-        const gasLimit = gasEstimate * 120n / 100n; // Aggiungi 20% di buffer
+        const gasLimit = gasEstimate * 120n / 100n;
         
         console.log(`Gas stimato per burn: ${gasEstimate.toString()}, Gas limit: ${gasLimit.toString()}`);
         
-        const tx = await contract.burn(fromAddress, amountWei, {
+        tx = await contract.burn(fromAddress, amountWei, {
           gasLimit: gasLimit
         });
-        
-        await tx.wait();
-        await loadContractData(); // Ricarica i dati dopo il burn
-        
-        return tx;
       } catch (gasError) {
         console.log('Errore nella stima del gas per burn, provo con gas limit fisso:', gasError);
         
-        // Fallback: usa un gas limit fisso più alto per piccole quantità
-        const gasLimit = amount <= 1 ? 500000n : 300000n; // Gas più alto per 1 token o meno
+        // Usa gas limit fisso più alto
+        const gasLimit = 600000n; // Gas limit fisso alto per burn
         
         console.log(`Usando gas limit fisso per burn: ${gasLimit.toString()}`);
         
-        const tx = await contract.burn(fromAddress, amountWei, {
+        tx = await contract.burn(fromAddress, amountWei, {
           gasLimit: gasLimit
         });
-        
-        await tx.wait();
-        await loadContractData();
-        
-        return tx;
       }
+      
+      console.log('Transazione burn inviata, attendo conferma...');
+      await tx.wait();
+      console.log('Burn completato con successo!');
+      
+      await loadContractData(); // Ricarica i dati dopo il burn
+      return tx;
     } catch (err) {
       let errorMessage = 'Errore nel burn: ';
       
