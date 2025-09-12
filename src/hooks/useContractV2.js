@@ -49,22 +49,11 @@ export const useContractV2 = (contractAddress, signer) => {
         setError(null);
         logger.info('Contratto inizializzato con successo');
         
-        // Testa immediatamente se il contratto risponde
+        // Testa se il contratto risponde
         contractInstance.name().then(name => {
-          logger.info('Contratto risponde correttamente', { name });
-          
-          // Testa se le funzioni mint/burn esistono realmente
-          return Promise.all([
-            contractInstance.mint.staticCall('0x0000000000000000000000000000000000000000', 0).catch(() => null),
-            contractInstance.burn.staticCall('0x0000000000000000000000000000000000000000', 0).catch(() => null)
-          ]);
-        }).then(([mintResult, burnResult]) => {
-          logger.info('Test funzioni contratto', { 
-            mintAvailable: mintResult !== null,
-            burnAvailable: burnResult !== null
-          });
+          logger.info('Contratto inizializzato correttamente', { name });
         }).catch(err => {
-          logger.error('Contratto non risponde alle chiamate', { error: err.message });
+          logger.error('Contratto non risponde', { error: err.message });
         });
       } catch (err) {
         const errorMsg = 'Indirizzo contratto non valido';
@@ -196,8 +185,8 @@ export const useContractV2 = (contractAddress, signer) => {
     return gasLimit;
   }, [tokenInfo.decimals]);
 
-  // Funzione per eseguire transazioni in modo sicuro con retry
-  const executeTransaction = useCallback(async (method, args, transactionName, retryCount = 0) => {
+  // Funzione per eseguire transazioni in modo semplice
+  const executeTransaction = useCallback(async (method, args, transactionName) => {
     if (isTransactionPending) {
       throw new Error('Transazione già in corso, attendere il completamento');
     }
@@ -206,7 +195,7 @@ export const useContractV2 = (contractAddress, signer) => {
     setError(null);
 
     try {
-      logger.info(`Inizio transazione ${transactionName} (tentativo ${retryCount + 1})`, { args });
+      logger.info(`Inizio transazione ${transactionName}`, { args });
       
       // Verifica che il contratto sia valido
       if (!contract) {
@@ -216,30 +205,6 @@ export const useContractV2 = (contractAddress, signer) => {
       // Verifica che il signer sia valido
       if (!signer) {
         throw new Error('Wallet non connesso');
-      }
-      
-      // Verifica la rete
-      const network = await signer.provider.getNetwork();
-      logger.info('Rete corrente', { chainId: network.chainId.toString(), name: network.name });
-      
-      // Verifica se la rete è corretta (Polygon Amoy = 80002)
-      if (network.chainId !== 80002n) {
-        logger.warn('Rete non corretta per il contratto', { 
-          expected: '80002 (Polygon Amoy)', 
-          actual: network.chainId.toString() 
-        });
-      }
-      
-      // Verifica il gas price della rete
-      try {
-        const feeData = await signer.provider.getFeeData();
-        logger.info('Dati gas rete', {
-          gasPrice: feeData.gasPrice?.toString(),
-          maxFeePerGas: feeData.maxFeePerGas?.toString(),
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas?.toString()
-        });
-      } catch (feeErr) {
-        logger.warn('Impossibile ottenere dati gas', { error: feeErr.message });
       }
       
       // Stima il gas
@@ -252,18 +217,12 @@ export const useContractV2 = (contractAddress, signer) => {
       
       logger.info(`Gas limit finale: ${gasLimit.toString()}`);
       
-      // Esegui la transazione con parametri ottimizzati
-      const tx = await method(...args, { 
-        gasLimit,
-        gasPrice: undefined, // Lascia che MetaMask calcoli il gas price
-        timeout: 120000, // 2 minuti timeout
-        maxFeePerGas: undefined, // Usa EIP-1559 se supportato
-        maxPriorityFeePerGas: undefined // Usa EIP-1559 se supportato
-      });
+      // Esegui la transazione
+      const tx = await method(...args, { gasLimit });
       logger.info(`Transazione ${transactionName} inviata`, { txHash: tx.hash });
       
-      // Attendi conferma con timeout
-      const receipt = await tx.wait(1); // Attendi almeno 1 conferma
+      // Attendi conferma
+      const receipt = await tx.wait();
       logger.info(`Transazione ${transactionName} confermata`, { 
         txHash: tx.hash,
         blockNumber: receipt.blockNumber.toString(),
@@ -282,14 +241,7 @@ export const useContractV2 = (contractAddress, signer) => {
 
       return tx;
     } catch (err) {
-      // Se è un errore RPC e non abbiamo fatto troppi tentativi, riprova
-      if (err.message.includes('Internal JSON-RPC error') && retryCount < 2) {
-        logger.warn(`Errore RPC, riprovo (tentativo ${retryCount + 1})`, { error: err.message });
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Aspetta 2 secondi
-        return executeTransaction(method, args, transactionName, retryCount + 1);
-      }
-      
-      logError(transactionName, err, { args, retryCount });
+      logError(transactionName, err, { args });
       throw err;
     } finally {
       setIsTransactionPending(false);
@@ -349,9 +301,6 @@ export const useContractV2 = (contractAddress, signer) => {
     try {
       logger.info('Inizio mint tokens', { amount, toAddress });
       
-      // Testa la connessione prima di procedere
-      await testContractConnection();
-      
       const amountWei = ethers.parseUnits(amount.toString(), tokenInfo.decimals);
       
       // Verifica che l'importo sia valido
@@ -372,7 +321,7 @@ export const useContractV2 = (contractAddress, signer) => {
       setError(errorMessage);
       throw err;
     }
-  }, [contract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction, testContractConnection]);
+  }, [contract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction]);
 
   // Burn tokens
   const burnTokens = useCallback(async (amount, fromAddress) => {
@@ -386,9 +335,6 @@ export const useContractV2 = (contractAddress, signer) => {
 
     try {
       logger.info('Inizio burn tokens', { amount, fromAddress });
-      
-      // Testa la connessione prima di procedere
-      await testContractConnection();
       
       const amountWei = ethers.parseUnits(amount.toString(), tokenInfo.decimals);
       
@@ -404,104 +350,21 @@ export const useContractV2 = (contractAddress, signer) => {
         throw new Error(`Saldo insufficiente: ${ethers.formatUnits(userBalance, tokenInfo.decimals)} token disponibili`);
       }
 
-      // CONTROLLO SPECIFICO: Verifica permessi e stato del contratto
-      let canBurn = false;
-      try {
-        // Verifica se il contratto è in pausa
-        const isPaused = await contract.paused();
-        logger.info('Stato pausa contratto per burn', { isPaused });
-        
-        if (isPaused) {
-          logger.warn('Contratto in pausa, tentativo di unpause');
-          try {
-            // Prova a fare unpause se l'utente ha i permessi
-            const unpauseTx = await contract.unpause();
-            await unpauseTx.wait();
-            logger.info('Contratto unpaused con successo');
-          } catch (unpauseErr) {
-            logger.error('Impossibile fare unpause', { error: unpauseErr.message });
-            throw new Error('Contratto in pausa e impossibile fare unpause - burn non disponibile');
-          }
-        }
-        
-        // Verifica i ruoli dell'utente
-        const userAddress = await signer.getAddress();
-        const adminRole = await contract.DEFAULT_ADMIN_ROLE();
-        const hasAdminRole = await contract.hasRole(adminRole, userAddress);
-        logger.info('Ruoli utente per burn', { userAddress, hasAdminRole });
-        
-        // Prova a fare una chiamata statica per vedere se la funzione funziona
-        await contract.burn.staticCall(fromAddress, 0);
-        canBurn = true;
-        logger.info('Funzione burn verificata e permessi OK');
-      } catch (err) {
-        logger.error('Problema con funzione burn', { 
-          error: err.message,
-          isPaused: err.message.includes('paused'),
-          noPermission: err.message.includes('role') || err.message.includes('permission')
-        });
-        canBurn = false;
-      }
+      // Esegui burn diretto
+      const tx = await executeTransaction(
+        contract.burn,
+        [fromAddress, amountWei],
+        'burn'
+      );
 
-      if (canBurn) {
-        try {
-          logger.info('Tentativo burn diretto con gas limit alto');
-          
-          // Prova prima con i parametri standard
-          let tx;
-          try {
-            tx = await executeTransaction(
-              contract.burn,
-              [fromAddress, amountWei],
-              'burn'
-            );
-          } catch (firstError) {
-            logger.warn('Primo tentativo burn fallito, provo con parametri diversi', { error: firstError.message });
-            
-            // Prova con solo l'amount (alcuni contratti burn solo dal msg.sender)
-            tx = await executeTransaction(
-              contract.burn,
-              [amountWei],
-              'burn_amount_only'
-            );
-          }
-          
-          logger.info('Burn completato con successo', { amount, fromAddress });
-          return tx;
-        } catch (burnError) {
-          logger.error('Burn diretto fallito nonostante verifica', { error: burnError.message });
-          throw burnError;
-        }
-      } else {
-        logger.info('Funzione burn non disponibile, uso transfer a address(0)');
-        
-        // Fallback: usa transfer a address(0) per simulare burn
-        const zeroAddress = '0x0000000000000000000000000000000000000000';
-        const tx = await executeTransaction(
-          contract.transfer,
-          [zeroAddress, amountWei],
-          'burn_via_transfer'
-        );
-        
-        logger.info('Burn completato via transfer a address(0)', { amount, fromAddress });
-        return tx;
-      }
+      logger.info('Burn completato con successo', { amount, fromAddress });
+      return tx;
     } catch (err) {
-      let errorMessage = `Errore nel burn: ${err.message}`;
-      
-      // Messaggi di errore più specifici
-      if (err.message.includes('Internal JSON-RPC error')) {
-        errorMessage = '❌ Errore del contratto: Il contratto potrebbe non supportare la funzione burn o essere in pausa. Prova a usare transfer a address(0) come alternativa.';
-      } else if (err.message.includes('execution reverted')) {
-        errorMessage = '❌ Transazione rifiutata: Il contratto ha rifiutato la transazione. Verifica i permessi e lo stato del contratto.';
-      } else if (err.message.includes('insufficient funds')) {
-        errorMessage = '❌ Fondi insufficienti: Non hai abbastanza MATIC per pagare il gas.';
-      }
-      
+      const errorMessage = `Errore nel burn: ${err.message}`;
       setError(errorMessage);
       throw err;
     }
-  }, [contract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction, testContractConnection]);
+  }, [contract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction]);
 
   // Carica i dati quando il contratto è pronto
   useEffect(() => {
