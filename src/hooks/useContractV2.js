@@ -162,7 +162,7 @@ export const useContractV2 = (contractAddress, signer) => {
     }
   }, [contract, signer, contractAddress, verifyContractFunctions]);
 
-  // Funzione per stimare il gas in modo sicuro
+  // Funzione per stimare il gas in modo sicuro con limiti testnet
   const estimateGasSafely = useCallback(async (method, ...args) => {
     // NON usare mai la stima gas - usa sempre gas limit fissi alti
     logger.info('Usando gas limit fisso per evitare errori RPC');
@@ -170,19 +170,26 @@ export const useContractV2 = (contractAddress, signer) => {
     const amount = args[1] ? ethers.formatUnits(args[1], tokenInfo.decimals) : 0;
     let gasLimit;
     
+    // Limiti Polygon Amoy: max 10M gas per transazione
+    const maxGasLimit = 10000000n; // 10M gas max per transazione
+    
     if (parseFloat(amount) <= 1) {
-      gasLimit = 1000000n; // 1M gas per 1 token - molto sicuro
+      gasLimit = 2000000n; // 2M gas per 1 token - più sicuro
     } else if (parseFloat(amount) <= 100) {
-      gasLimit = 800000n; // 800k gas per quantità medie
+      gasLimit = 1500000n; // 1.5M gas per quantità medie
     } else {
-      gasLimit = 600000n; // 600k gas per quantità grandi
+      gasLimit = 1000000n; // 1M gas per quantità grandi
     }
+    
+    // Assicurati che non superi i limiti della testnet
+    const finalGasLimit = gasLimit > maxGasLimit ? maxGasLimit : gasLimit;
     
     logger.info('Gas limit fisso applicato', { 
       amount: parseFloat(amount),
-      gasLimit: gasLimit.toString() 
+      gasLimit: finalGasLimit.toString(),
+      maxAllowed: maxGasLimit.toString()
     });
-    return gasLimit;
+    return finalGasLimit;
   }, [tokenInfo.decimals]);
 
   // Funzione per eseguire transazioni in modo semplice
@@ -232,6 +239,12 @@ export const useContractV2 = (contractAddress, signer) => {
       // Ricarica i dati
       await loadContractData();
       
+      // Reset dello stato dopo successo
+      setError(null);
+      
+      // Piccolo delay per evitare problemi di concorrenza
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       logTransaction(transactionName, {
         txHash: tx.hash,
         blockNumber: receipt.blockNumber.toString(),
@@ -242,8 +255,18 @@ export const useContractV2 = (contractAddress, signer) => {
       return tx;
     } catch (err) {
       logError(transactionName, err, { args });
+      // Reset completo dello stato in caso di errore
+      setIsTransactionPending(false);
+      setError(null);
+      // Ricarica i dati anche in caso di errore per mantenere sincronizzazione
+      try {
+        await loadContractData();
+      } catch (reloadErr) {
+        logger.warn('Errore nel ricaricare dati dopo errore', { error: reloadErr.message });
+      }
       throw err;
     } finally {
+      // Assicurati che isTransactionPending sia sempre false
       setIsTransactionPending(false);
     }
   }, [isTransactionPending, estimateGasSafely, loadContractData]);
