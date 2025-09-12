@@ -2,6 +2,12 @@
 
 A React-based decentralized application (DApp) that allows users to connect their wallet and test the main functions of the IGE Token smart contract deployed on a blockchain testnet.
 
+## 🌐 Live Demo
+
+**🚀 Deployed Application**: [https://ige-token.vercel.app/](https://ige-token.vercel.app/)
+
+The application is live and ready for testing on Polygon Amoy Testnet. Simply connect your MetaMask wallet and start interacting with IGE Token smart contracts.
+
 ## 🚀 Features
 
 - **🔗 Wallet Connection**: Secure MetaMask integration with visual connection status
