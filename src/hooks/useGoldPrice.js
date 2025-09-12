@@ -14,6 +14,9 @@ export const useGoldPrice = () => {
     setIsLoading(true);
     setError(null);
 
+    // Rileva se siamo su mobile
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
     // Timeout di 3 secondi per l'alert
     const timeoutId = setTimeout(() => {
       if (isLoading) {
@@ -26,8 +29,7 @@ export const useGoldPrice = () => {
       const response = await axios.get('https://api.coinbase.com/v2/exchange-rates?currency=XAU', {
         timeout: 10000,
         headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'IGE-Token-Lab/1.0'
+          'Accept': 'application/json'
         }
       });
       
@@ -49,17 +51,50 @@ export const useGoldPrice = () => {
       }
     } catch (err) {
       console.warn('API Coinbase fallita:', err.message);
+      
+      // Su mobile, prova un approccio diverso se l'API principale fallisce
+      if (isMobile) {
+        try {
+          console.log('Tentativo con approccio mobile...');
+          // Usa un'API diversa che funziona meglio su mobile
+          const mobileResponse = await axios.get('https://api.metals.live/v1/spot/gold', {
+            timeout: 15000,
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+          
+          if (mobileResponse.data && mobileResponse.data.price) {
+            const usdPerOunce = parseFloat(mobileResponse.data.price);
+            const usdPerGram = usdPerOunce / 31.1035;
+            const eurPerGram = usdPerGram * 0.85;
+            
+            setGoldPrices({
+              usdPerOunce: usdPerOunce.toFixed(2),
+              usdPerGram: usdPerGram.toFixed(2),
+              eurPerGram: eurPerGram.toFixed(2)
+            });
+            
+            console.log('Prezzi oro caricati con successo su mobile');
+            clearTimeout(timeoutId);
+            setIsLoading(false);
+            return;
+          }
+        } catch (mobileErr) {
+          console.warn('Approccio mobile fallito:', mobileErr.message);
+        }
+      }
     }
 
     // Fallback: usa dati di esempio realistici
     console.warn('API non disponibile, usando dati di esempio');
     setGoldPrices({
-      usdPerOunce: '2000.00',
-      usdPerGram: '64.37',
-      eurPerGram: '54.72'
+      usdPerOunce: '3652.00',
+      usdPerGram: '117.41',
+      eurPerGram: '99.80'
     });
     
-    setError('API non disponibile. Mostrando dati di esempio.');
+    setError('API non disponibile. Mostro dati di esempio.');
     clearTimeout(timeoutId);
     setIsLoading(false);
   };

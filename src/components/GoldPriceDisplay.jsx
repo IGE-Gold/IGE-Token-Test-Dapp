@@ -54,9 +54,17 @@ const GoldPriceDisplay = ({ goldPrices, isLoading, error, refreshPrices, isConne
         marginBottom: '8px',
         fontSize: '9px',
         color: 'var(--ige-gray)',
-        opacity: 0.7
+        opacity: 0.7,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
       }}>
-        COINBASE
+        <span>COINBASE</span>
+        {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+          <span style={{ color: 'var(--ige-gold)', fontSize: '8px' }}>
+            📱 Mobile
+          </span>
+        )}
       </div>
       
       {lastUpdate && (
@@ -66,8 +74,18 @@ const GoldPriceDisplay = ({ goldPrices, isLoading, error, refreshPrices, isConne
       )}
       
       {error && (
-        <div className="error">
-          {error}
+        <div className="error" style={{
+          fontSize: '10px',
+          padding: '8px',
+          background: 'rgba(220, 38, 38, 0.1)',
+          border: '1px solid rgba(220, 38, 38, 0.3)',
+          borderRadius: '4px',
+          color: '#ef4444'
+        }}>
+          ⚠️ {error}
+          <div style={{ marginTop: '4px', fontSize: '9px', opacity: 0.8 }}>
+            Su mobile: verifica la connessione internet e riprova
+          </div>
         </div>
       )}
       

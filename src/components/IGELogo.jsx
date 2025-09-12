@@ -5,7 +5,6 @@ const IGELogo = ({ size = 402, className = "" }) => {
     <div className={`logo-icon ${className}`} style={{ width: size, height: 'auto' }}>
       <svg 
         width={size} 
-        height="auto" 
         viewBox="0 0 134 78" 
         fill="none" 
         xmlns="http://www.w3.org/2000/svg"

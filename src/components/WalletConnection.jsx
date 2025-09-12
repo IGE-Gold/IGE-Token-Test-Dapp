@@ -9,9 +9,21 @@ const WalletConnection = ({
   disconnectWallet, 
   switchToAmoy 
 }) => {
+  const [isSwitching, setIsSwitching] = React.useState(false);
   const formatAddress = (address) => {
     if (!address) return '';
     return address; // Mostra l'indirizzo completo
+  };
+
+  const handleSwitchToAmoy = async () => {
+    setIsSwitching(true);
+    try {
+      await switchToAmoy();
+    } catch (error) {
+      console.error('Errore nel passaggio alla rete:', error);
+    } finally {
+      setIsSwitching(false);
+    }
   };
 
   return (
@@ -34,6 +46,22 @@ const WalletConnection = ({
           <p style={{ marginBottom: '12px', fontSize: '11px', color: 'var(--ige-gray)' }}>
             Connetti il tuo wallet MetaMask per iniziare
           </p>
+          
+          {/* Istruzioni per mobile */}
+          {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+            <div style={{
+              marginBottom: '12px',
+              padding: '8px 12px',
+              background: 'rgba(212, 175, 55, 0.1)',
+              border: '1px solid rgba(212, 175, 55, 0.3)',
+              borderRadius: '4px',
+              fontSize: '10px',
+              color: 'var(--ige-gold)'
+            }}>
+              📱 <strong>Su Mobile:</strong> Apri MetaMask → Menu (☰) → Browser → Naviga qui → Connetti
+            </div>
+          )}
+          
           <button 
             className="button" 
             onClick={connectWallet}
@@ -65,17 +93,25 @@ const WalletConnection = ({
           <div style={{ marginTop: '12px' }}>
             <button 
               className="button secondary" 
-              onClick={switchToAmoy}
+              onClick={handleSwitchToAmoy}
+              disabled={isSwitching}
               style={{ marginRight: '8px' }}
             >
-              Passa a Amoy Testnet
+              {isSwitching ? (
+                <>
+                  <span className="loading" style={{ marginRight: '4px' }}></span>
+                  Passaggio...
+                </>
+              ) : (
+                'Passa a Amoy Testnet'
+              )}
             </button>
             <button 
               className="button danger" 
               onClick={disconnectWallet}
             >
               <LogOut size={12} style={{ marginRight: '4px' }} />
-              Disconnetti
+              Disconnetti Metamask
             </button>
           </div>
         </div>

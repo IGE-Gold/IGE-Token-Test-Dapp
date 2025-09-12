@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, Plus, Minus, RefreshCw } from 'lucide-react';
+import { Coins, Plus, Minus, RefreshCw, Wallet } from 'lucide-react';
 import TransactionLogger from './TransactionLogger';
 import TransactionOverlay from './TransactionOverlay';
 
@@ -15,7 +15,8 @@ const TokenManager = ({
   mintTokens,
   burnTokens,
   loadContractData,
-  account // Aggiungo l'account del wallet connesso
+  account, // Aggiungo l'account del wallet connesso
+  addTokenToWallet // Aggiungo la funzione per aggiungere il token al wallet
 }) => {
   const [mintAmount, setMintAmount] = useState('');
   const [burnAmount, setBurnAmount] = useState('');
@@ -92,6 +93,24 @@ const TokenManager = ({
     }
   };
 
+  const handleAddTokenToWallet = async () => {
+    if (!contractAddress || !tokenInfo.symbol) {
+      alert('Informazioni del token non disponibili. Assicurati che il contratto sia caricato correttamente.');
+      return;
+    }
+
+    try {
+      await addTokenToWallet(
+        contractAddress,
+        tokenInfo.symbol,
+        18, // I token ERC20 standard hanno 18 decimali
+        'https://raw.githubusercontent.com/your-repo/ige-token/main/public/ige.svg' // URL dell'immagine del token
+      );
+    } catch (error) {
+      console.error('Errore nell\'aggiunta del token:', error);
+    }
+  };
+
   return (
     <div className="card">
       <h2>
@@ -115,7 +134,65 @@ const TokenManager = ({
         />
       </div>
 
-      {/* Nome Token - subito dopo l'indirizzo */}
+      {/* Avviso rete sbagliata */}
+      {tokenInfo.name === 'Unknown Token' && (
+        <div style={{ 
+          marginBottom: '16px',
+          padding: '12px',
+          background: 'rgba(220, 38, 38, 0.1)',
+          borderRadius: '4px',
+          border: '2px solid #ef4444',
+          textAlign: 'center'
+        }}>
+          <div style={{ 
+            fontSize: '12px', 
+            color: '#ef4444', 
+            marginBottom: '8px',
+            fontWeight: '600'
+          }}>
+            ⚠️ RETE SBAGLIATA
+          </div>
+          <div style={{ 
+            fontSize: '10px', 
+            color: '#fca5a5',
+            lineHeight: '1.4'
+          }}>
+            Il contratto esiste solo su Polygon Amoy Testnet.<br/>
+            <strong>Clicca "Passa a Amoy Testnet" per cambiare rete.</strong><br/>
+            Se il cambio automatico fallisce, cambia manualmente in MetaMask.
+          </div>
+        </div>
+      )}
+
+      {/* Pulsanti per ricaricare i dati e aggiungere token - SOPRA il nome token */}
+      <div style={{ marginBottom: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <button 
+          className="button secondary" 
+          onClick={loadContractData}
+          disabled={isLoading || !contractAddress}
+        >
+          <RefreshCw size={10} style={{ marginRight: '4px' }} />
+          {isLoading ? 'Caricamento...' : 'Ricarica Dati'}
+        </button>
+        
+        {tokenInfo.symbol && (
+          <button 
+            className="button success" 
+            onClick={handleAddTokenToWallet}
+            disabled={!contractAddress || !tokenInfo.symbol}
+            style={{ 
+              background: 'linear-gradient(135deg, #d4af37, #b8860b)',
+              border: '1px solid #d4af37',
+              color: '#000'
+            }}
+          >
+            <Wallet size={10} style={{ marginRight: '4px' }} />
+            Aggiungi token a Metamask
+          </button>
+        )}
+      </div>
+
+      {/* Nome Token - dopo i pulsanti */}
       {tokenInfo.name && (
         <div style={{ 
           marginBottom: '16px',
@@ -283,17 +360,6 @@ const TokenManager = ({
         </div>
       </div>
 
-      {/* Pulsante per ricaricare i dati */}
-      <div style={{ marginBottom: '12px' }}>
-        <button 
-          className="button secondary" 
-          onClick={loadContractData}
-          disabled={isLoading || !contractAddress}
-        >
-          <RefreshCw size={10} style={{ marginRight: '4px' }} />
-          {isLoading ? 'Caricamento...' : 'Ricarica Dati'}
-        </button>
-      </div>
 
       {/* Sezione Test Funzioni Base */}
       <div style={{ marginBottom: '20px' }}>

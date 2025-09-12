@@ -126,21 +126,75 @@ export const useContractV2 = (contractAddress, signer) => {
     try {
       logger.info('Inizio caricamento dati contratto');
       
+      // Verifica la rete corrente
+      const network = await signer.provider.getNetwork();
+      logger.info('Rete corrente', { 
+        chainId: network.chainId.toString(), 
+        name: network.name 
+      });
+      
+      // Verifica che siamo su Polygon Amoy (chainId: 80002)
+      if (network.chainId !== 80002n) {
+        logger.warn('Attenzione: non sei sulla rete Polygon Amoy', { 
+          currentChainId: network.chainId.toString(),
+          expectedChainId: '80002'
+        });
+      }
+      
       // Verifica le funzioni del contratto
       const contractValid = await verifyContractFunctions();
       if (!contractValid) {
         throw new Error('Contratto non valido o non supporta le funzioni richieste');
       }
       
-      const [name, symbol, decimals, totalSupplyValue, userAddress] = await Promise.all([
-        contract.name(),
-        contract.symbol(),
-        contract.decimals(),
-        contract.totalSupply(),
-        signer.getAddress()
-      ]);
+      // Carica i dati con gestione errori per ogni funzione
+      const userAddress = await signer.getAddress();
+      
+      let name = 'Unknown Token';
+      let symbol = 'UNK';
+      let decimals = 18;
+      let totalSupplyValue = 0n;
+      
+      try {
+        name = await contract.name();
+        logger.info('Nome token caricato', { name });
+      } catch (err) {
+        logger.warn('Impossibile caricare nome token', { error: err.message });
+        name = 'Unknown Token';
+      }
+      
+      try {
+        symbol = await contract.symbol();
+        logger.info('Simbolo token caricato', { symbol });
+      } catch (err) {
+        logger.warn('Impossibile caricare simbolo token', { error: err.message });
+        symbol = 'UNK';
+      }
+      
+      try {
+        decimals = await contract.decimals();
+        logger.info('Decimali token caricati', { decimals });
+      } catch (err) {
+        logger.warn('Impossibile caricare decimali token', { error: err.message });
+        decimals = 18;
+      }
+      
+      try {
+        totalSupplyValue = await contract.totalSupply();
+        logger.info('Total supply caricato', { totalSupply: totalSupplyValue.toString() });
+      } catch (err) {
+        logger.warn('Impossibile caricare total supply', { error: err.message });
+        totalSupplyValue = 0n;
+      }
 
-      const userBalanceValue = await contract.balanceOf(userAddress);
+      let userBalanceValue = 0n;
+      try {
+        userBalanceValue = await contract.balanceOf(userAddress);
+        logger.info('Saldo utente caricato', { balance: userBalanceValue.toString() });
+      } catch (err) {
+        logger.warn('Impossibile caricare saldo utente', { error: err.message });
+        userBalanceValue = 0n;
+      }
 
       setTokenInfo({ name, symbol, decimals: Number(decimals) });
       setTotalSupply(ethers.formatUnits(totalSupplyValue, decimals));

@@ -18,7 +18,8 @@ function App() {
     isConnecting,
     connectWallet,
     disconnectWallet,
-    switchToAmoy
+    switchToAmoy,
+    addTokenToWallet
   } = useWallet();
 
   const {
@@ -111,6 +112,7 @@ function App() {
               burnTokens={burnTokens}
               loadContractData={loadContractData}
               account={account}
+              addTokenToWallet={addTokenToWallet}
             />
           ) : (
             <div className="card" style={{ textAlign: 'center' }}>
