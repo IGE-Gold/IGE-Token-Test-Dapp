@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Coins, Plus, Minus, RefreshCw } from 'lucide-react';
 import TransactionLogger from './TransactionLogger';
 import TransactionOverlay from './TransactionOverlay';
-import MetaMaskGuide from './MetaMaskGuide';
 
 const TokenManager = ({ 
   contractAddress,
