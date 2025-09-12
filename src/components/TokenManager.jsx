@@ -404,9 +404,6 @@ const TokenManager = ({
       
       {/* Sovraimpressione per transazione in corso */}
       <TransactionOverlay isVisible={isTransactionPending} />
-      
-      {/* Guida per aggiungere token IGE a MetaMask */}
-      <MetaMaskGuide />
     </div>
   );
 };

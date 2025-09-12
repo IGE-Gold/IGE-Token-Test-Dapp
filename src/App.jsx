@@ -5,6 +5,7 @@ import { useGoldPrice } from './hooks/useGoldPrice';
 import WalletConnection from './components/WalletConnection';
 import GoldPriceDisplay from './components/GoldPriceDisplay';
 import TokenManager from './components/TokenManager';
+import MetaMaskGuide from './components/MetaMaskGuide';
 import IGELogo from './components/IGELogo';
 
 function App() {
@@ -120,6 +121,16 @@ function App() {
               </p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Guida MetaMask come contenitore separato */}
+      <div className="main-content">
+        <div className="left-column">
+          <MetaMaskGuide />
+        </div>
+        <div className="right-column">
+          {/* Spazio vuoto per bilanciare il layout */}
         </div>
       </div>
 

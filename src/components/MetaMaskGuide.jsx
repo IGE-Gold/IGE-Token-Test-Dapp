@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { ExternalLink, Copy, Check } from 'lucide-react';
-import './MetaMaskGuide.css';
+import { ExternalLink, Copy, Check, Wallet } from 'lucide-react';
 
 const MetaMaskGuide = () => {
   const [copied, setCopied] = useState(false);
@@ -20,114 +19,92 @@ const MetaMaskGuide = () => {
   };
 
   return (
-    <div className="metamask-guide">
-      <h3>🔗 Come aggiungere il token IGE a MetaMask</h3>
+    <div className="gold-quote-container">
+      <div className="gold-quote-header">
+        <Wallet size={20} style={{ marginRight: '8px' }} />
+        <h3>Come aggiungere IGE Token a MetaMask</h3>
+      </div>
       
-      <div className="guide-steps">
-        <div className="step">
-          <div className="step-number">1</div>
-          <div className="step-content">
-            <h4>Apri MetaMask</h4>
-            <p>Clicca sull'icona MetaMask nel browser</p>
+      <div className="gold-quote-content">
+        <div className="metamask-steps">
+          <div className="step-item">
+            <span className="step-number">1</span>
+            <span className="step-text">Apri MetaMask → Import tokens</span>
           </div>
-        </div>
-        
-        <div className="step">
-          <div className="step-number">2</div>
-          <div className="step-content">
-            <h4>Vai alla sezione Token</h4>
-            <p>Scorri in basso e clicca su "Import tokens"</p>
+          
+          <div className="step-item">
+            <span className="step-number">2</span>
+            <span className="step-text">Inserisci i dati del token:</span>
           </div>
-        </div>
-        
-        <div className="step">
-          <div className="step-number">3</div>
-          <div className="step-content">
-            <h4>Inserisci i dati del token</h4>
-            <div className="token-data">
-              <div className="data-field">
-                <label>Indirizzo contratto:</label>
-                <div className="copy-field">
-                  <code>{contractAddress}</code>
-                  <button 
-                    onClick={() => copyToClipboard(contractAddress)}
-                    className="copy-btn"
-                  >
-                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                  </button>
-                </div>
+          
+          <div className="token-data-compact">
+            <div className="data-row">
+              <span className="data-label">Indirizzo:</span>
+              <div className="data-value">
+                <code>{contractAddress}</code>
+                <button 
+                  onClick={() => copyToClipboard(contractAddress)}
+                  className="copy-btn-small"
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                </button>
               </div>
-              
-              <div className="data-field">
-                <label>Simbolo token:</label>
-                <div className="copy-field">
-                  <code>{tokenSymbol}</code>
-                  <button 
-                    onClick={() => copyToClipboard(tokenSymbol)}
-                    className="copy-btn"
-                  >
-                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                  </button>
-                </div>
+            </div>
+            
+            <div className="data-row">
+              <span className="data-label">Simbolo:</span>
+              <div className="data-value">
+                <code>{tokenSymbol}</code>
+                <button 
+                  onClick={() => copyToClipboard(tokenSymbol)}
+                  className="copy-btn-small"
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                </button>
               </div>
-              
-              <div className="data-field">
-                <label>Decimali:</label>
-                <div className="copy-field">
-                  <code>{tokenDecimals}</code>
-                  <button 
-                    onClick={() => copyToClipboard(tokenDecimals.toString())}
-                    className="copy-btn"
-                  >
-                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                  </button>
-                </div>
+            </div>
+            
+            <div className="data-row">
+              <span className="data-label">Decimali:</span>
+              <div className="data-value">
+                <code>{tokenDecimals}</code>
+                <button 
+                  onClick={() => copyToClipboard(tokenDecimals.toString())}
+                  className="copy-btn-small"
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                </button>
               </div>
             </div>
           </div>
-        </div>
-        
-        <div className="step">
-          <div className="step-number">4</div>
-          <div className="step-content">
-            <h4>Conferma l'importazione</h4>
-            <p>Clicca su "Add Custom Token" e poi "Import Tokens"</p>
+          
+          <div className="step-item">
+            <span className="step-number">3</span>
+            <span className="step-text">Conferma l'importazione</span>
           </div>
         </div>
-      </div>
-      
-      <div className="network-info">
-        <h4>🌐 Rete richiesta: Polygon Amoy Testnet</h4>
-        <p>
-          Assicurati di essere connesso alla rete Polygon Amoy Testnet.
-          <br />
+        
+        <div className="metamask-links">
           <a 
             href="https://docs.polygon.technology/docs/develop/network-details/network/" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="network-link"
+            className="metamask-link"
           >
-            Guida per aggiungere Polygon Amoy a MetaMask
-            <ExternalLink size={14} />
+            🌐 Aggiungi Polygon Amoy
+            <ExternalLink size={12} />
           </a>
-        </p>
-      </div>
-      
-      <div className="faucet-info">
-        <h4>💰 Hai bisogno di MATIC per il gas?</h4>
-        <p>
-          Ottieni MATIC gratuiti per le transazioni:
-          <br />
+          
           <a 
             href="https://faucet.polygon.technology/" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="faucet-link"
+            className="metamask-link"
           >
-            Polygon Faucet
-            <ExternalLink size={14} />
+            💰 Ottieni MATIC gratuiti
+            <ExternalLink size={12} />
           </a>
-        </p>
+        </div>
       </div>
     </div>
   );
