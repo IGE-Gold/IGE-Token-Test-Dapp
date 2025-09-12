@@ -340,8 +340,10 @@ export const useContractV2 = (contractAddress, signer) => {
       logger.info('Mint completato con successo', { amount, toAddress });
       return tx;
     } catch (err) {
-      const errorMessage = `Errore nel mint: ${err.message}`;
-      setError(errorMessage);
+      // Messaggio utente generico per errori
+      setError('Testnet non disponibile, Riprova fra poco');
+      // Log dettagliato per debug
+      logError('mint', err, { amount, toAddress });
       throw err;
     }
   }, [contract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction]);
@@ -383,8 +385,10 @@ export const useContractV2 = (contractAddress, signer) => {
       logger.info('Burn completato con successo', { amount, fromAddress });
       return tx;
     } catch (err) {
-      const errorMessage = `Errore nel burn: ${err.message}`;
-      setError(errorMessage);
+      // Messaggio utente generico per errori
+      setError('Testnet non disponibile, Riprova fra poco');
+      // Log dettagliato per debug
+      logError('burn', err, { amount, fromAddress });
       throw err;
     }
   }, [contract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction]);

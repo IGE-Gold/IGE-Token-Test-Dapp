@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Coins, Plus, Minus, RefreshCw } from 'lucide-react';
 import TransactionLogger from './TransactionLogger';
+import TransactionOverlay from './TransactionOverlay';
+import MetaMaskGuide from './MetaMaskGuide';
 
 const TokenManager = ({ 
   contractAddress,
@@ -399,6 +401,12 @@ const TokenManager = ({
         </form>
         </div>
       </div>
+      
+      {/* Sovraimpressione per transazione in corso */}
+      <TransactionOverlay isVisible={isTransactionPending} />
+      
+      {/* Guida per aggiungere token IGE a MetaMask */}
+      <MetaMaskGuide />
     </div>
   );
 };
