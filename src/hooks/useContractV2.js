@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { logger, logTransaction, logError } from '../utils/logger';
 
@@ -26,7 +26,15 @@ const ERC20_ABI = [
   "event Burn(address indexed from, uint256 amount)"
 ];
 
+// Reads go through a public Amoy node, not the wallet RPC (the RPC saved in MetaMask may be down)
+const AMOY_READ_RPC = 'https://polygon-amoy-bor-rpc.publicnode.com';
+const readProvider = new ethers.JsonRpcProvider(AMOY_READ_RPC, 80002, { staticNetwork: true });
+
 export const useContractV2 = (contractAddress, signer) => {
+  const readContract = useMemo(() => {
+    try { return contractAddress ? new ethers.Contract(contractAddress, ERC20_ABI, readProvider) : null; }
+    catch { return null; }
+  }, [contractAddress]);
   const [contract, setContract] = useState(null);
   const [totalSupply, setTotalSupply] = useState('0');
   const [userBalance, setUserBalance] = useState('0');
@@ -50,7 +58,7 @@ export const useContractV2 = (contractAddress, signer) => {
         logger.info('Contratto inizializzato con successo');
         
         // Testa se il contratto risponde
-        contractInstance.name().then(name => {
+        readProvider && new ethers.Contract(contractAddress, ERC20_ABI, readProvider).name().then(name => {
           logger.info('Contratto inizializzato correttamente', { name });
         }).catch(err => {
           logger.error('Contratto non risponde', { error: err.message });
@@ -156,7 +164,7 @@ export const useContractV2 = (contractAddress, signer) => {
       let totalSupplyValue = 0n;
       
       try {
-        name = await contract.name();
+        name = await readContract.name();
         logger.info('Nome token caricato', { name });
       } catch (err) {
         logger.warn('Impossibile caricare nome token', { error: err.message });
@@ -164,7 +172,7 @@ export const useContractV2 = (contractAddress, signer) => {
       }
       
       try {
-        symbol = await contract.symbol();
+        symbol = await readContract.symbol();
         logger.info('Simbolo token caricato', { symbol });
       } catch (err) {
         logger.warn('Impossibile caricare simbolo token', { error: err.message });
@@ -172,7 +180,7 @@ export const useContractV2 = (contractAddress, signer) => {
       }
       
       try {
-        decimals = await contract.decimals();
+        decimals = await readContract.decimals();
         logger.info('Decimali token caricati', { decimals });
       } catch (err) {
         logger.warn('Impossibile caricare decimali token', { error: err.message });
@@ -180,7 +188,7 @@ export const useContractV2 = (contractAddress, signer) => {
       }
       
       try {
-        totalSupplyValue = await contract.totalSupply();
+        totalSupplyValue = await readContract.totalSupply();
         logger.info('Total supply caricato', { totalSupply: totalSupplyValue.toString() });
       } catch (err) {
         logger.warn('Impossibile caricare total supply', { error: err.message });
@@ -189,7 +197,7 @@ export const useContractV2 = (contractAddress, signer) => {
 
       let userBalanceValue = 0n;
       try {
-        userBalanceValue = await contract.balanceOf(userAddress);
+        userBalanceValue = await readContract.balanceOf(userAddress);
         logger.info('Saldo utente caricato', { balance: userBalanceValue.toString() });
       } catch (err) {
         logger.warn('Impossibile caricare saldo utente', { error: err.message });
@@ -214,7 +222,7 @@ export const useContractV2 = (contractAddress, signer) => {
     } finally {
       setIsLoading(false);
     }
-  }, [contract, signer, contractAddress, verifyContractFunctions]);
+  }, [contract, readContract, signer, contractAddress, verifyContractFunctions]);
 
   // Funzione per stimare il gas in modo sicuro con limiti testnet
   const estimateGasSafely = useCallback(async (method, ...args) => {
@@ -335,13 +343,13 @@ export const useContractV2 = (contractAddress, signer) => {
       logger.info('Test connessione contratto');
       
       // Prova a chiamare una funzione view (non costa gas)
-      const name = await contract.name();
-      const symbol = await contract.symbol();
+      const name = await readContract.name();
+      const symbol = await readContract.symbol();
       
       // Verifica se il contratto è in pausa
       let isPaused = false;
       try {
-        isPaused = await contract.paused();
+        isPaused = await readContract.paused();
         logger.info('Stato pausa contratto', { isPaused });
       } catch (err) {
         logger.warn('Impossibile verificare stato pausa', { error: err.message });
@@ -351,7 +359,7 @@ export const useContractV2 = (contractAddress, signer) => {
       try {
         const userAddress = await signer.getAddress();
         const adminRole = await contract.DEFAULT_ADMIN_ROLE();
-        const hasAdminRole = await contract.hasRole(adminRole, userAddress);
+        const hasAdminRole = await readContract.hasRole(adminRole, userAddress);
         logger.info('Ruoli utente', { userAddress, hasAdminRole });
       } catch (err) {
         logger.warn('Impossibile verificare ruoli', { error: err.message });
@@ -363,7 +371,7 @@ export const useContractV2 = (contractAddress, signer) => {
       logger.error('Errore connessione contratto', err);
       throw new Error(`Contratto non raggiungibile: ${err.message}`);
     }
-  }, [contract, signer]);
+  }, [contract, readContract, signer]);
 
   // Mint tokens
   const mintTokens = useCallback(async (amount, toAddress) => {
@@ -400,7 +408,7 @@ export const useContractV2 = (contractAddress, signer) => {
       logError('mint', err, { amount, toAddress });
       throw err;
     }
-  }, [contract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction]);
+  }, [contract, readContract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction]);
 
   // Burn tokens
   const burnTokens = useCallback(async (amount, fromAddress) => {
@@ -424,7 +432,7 @@ export const useContractV2 = (contractAddress, signer) => {
 
       // Verifica saldo
       const userAddress = await signer.getAddress();
-      const userBalance = await contract.balanceOf(userAddress);
+      const userBalance = await readContract.balanceOf(userAddress);
       if (userBalance < amountWei) {
         throw new Error(`Saldo insufficiente: ${ethers.formatUnits(userBalance, tokenInfo.decimals)} token disponibili`);
       }
@@ -445,7 +453,7 @@ export const useContractV2 = (contractAddress, signer) => {
       logError('burn', err, { amount, fromAddress });
       throw err;
     }
-  }, [contract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction]);
+  }, [contract, readContract, signer, tokenInfo.decimals, isTransactionPending, executeTransaction]);
 
   // Carica i dati quando il contratto è pronto
   useEffect(() => {
