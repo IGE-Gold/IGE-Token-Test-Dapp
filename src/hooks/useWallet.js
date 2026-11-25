@@ -1,6 +1,44 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
+
+// Amoy setup: switch to Amoy and, if the RPC saved in MetaMask is broken, propose a working one
+const AMOY = {
+  chainId: '0x13882',
+  chainName: 'Polygon Amoy Testnet',
+  nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+  rpcUrls: ['https://polygon-amoy-bor-rpc.publicnode.com', 'https://polygon-amoy.drpc.org'],
+  blockExplorerUrls: ['https://amoy.polygonscan.com/'],
+};
+const walletRpcWorks = async () => {
+  try {
+    await Promise.race([
+      window.ethereum.request({ method: 'eth_blockNumber' }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000)),
+    ]);
+    return true;
+  } catch { return false; }
+};
+export const ensureAmoy = async () => {
+  if (!window.ethereum) return false;
+  let chainId = await window.ethereum.request({ method: 'eth_chainId' });
+  if (chainId !== AMOY.chainId) {
+    try {
+      await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: AMOY.chainId }] });
+    } catch (e) {
+      const code = e?.data?.originalError?.code ?? e?.code;
+      if (code === 4001) return false;
+      await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [AMOY] });
+    }
+    chainId = await window.ethereum.request({ method: 'eth_chainId' });
+  }
+  if (chainId === AMOY.chainId && !(await walletRpcWorks())) {
+    // Same chainId with a working RPC: MetaMask asks to add/use the new endpoint
+    await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [AMOY] });
+  }
+  return (await window.ethereum.request({ method: 'eth_chainId' })) === AMOY.chainId && (await walletRpcWorks());
+};
+
 export const useWallet = () => {
   const [account, setAccount] = useState(null);
   const [provider, setProvider] = useState(null);
@@ -26,6 +64,7 @@ export const useWallet = () => {
         });
         
         if (accounts.length > 0) {
+          try { await ensureAmoy(); } catch (e) { console.warn('ensureAmoy:', e?.message || e); }
           const provider = new ethers.BrowserProvider(window.ethereum);
           const signer = await provider.getSigner();
           
@@ -58,113 +97,12 @@ export const useWallet = () => {
   };
 
   const switchToAmoy = async () => {
-    console.log('🔄 switchToAmoy chiamata');
-    
-    if (!window.ethereum) {
-      console.error('❌ MetaMask non è installato');
-      alert('MetaMask non è installato!');
-      return;
-    }
-
-    const amoyChainId = '0x13882';
-    const amoyNetwork = {
-      chainId: amoyChainId,
-      chainName: 'Polygon Amoy Testnet',
-      nativeCurrency: {
-        name: 'POL',
-        symbol: 'POL',
-        decimals: 18,
-      },
-      rpcUrls: ['https://polygon-amoy-bor-rpc.publicnode.com', 'https://polygon-amoy.drpc.org'],
-      blockExplorerUrls: ['https://amoy.polygonscan.com/'],
-    };
-
     try {
-      // Prima controlla la rete corrente
-      console.log('🔍 Controllo rete corrente...');
-      const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
-      console.log('📍 Rete corrente:', currentChainId);
-      
-      // Mappa delle reti conosciute per debug
-      const networkNames = {
-        '0x1': 'Ethereum Mainnet',
-        '0x2105': 'Base Mainnet', 
-        '0x13882': 'Polygon Amoy Testnet',
-        '0x89': 'Polygon Mainnet'
-      };
-      
-      const currentNetworkName = networkNames[currentChainId] || `Rete sconosciuta (${currentChainId})`;
-      console.log('🌐 Nome rete corrente:', currentNetworkName);
-      
-      if (currentChainId === amoyChainId) {
-        console.log('✅ Sei già connesso alla rete Amoy');
-        alert('Sei già connesso alla rete Amoy: per vedere il token seleziona su Metamask la rete Polygon Amoy Testnet su Custom Network');
-        return;
-      }
-      
-      // Mostra avviso se non sei su Amoy
-      console.log(`⚠️ Sei su ${currentNetworkName}, devi passare a Polygon Amoy Testnet`);
-
-      // Prova a passare alla rete Amoy
-      console.log('🔄 Tentativo di passaggio alla rete Amoy...');
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: amoyChainId }],
-      });
-      console.log('✅ Passato con successo alla rete Amoy');
-      alert('Passato con successo alla rete Amoy!');
-      
-    } catch (switchError) {
-      console.log('❌ Errore nel passaggio alla rete:', switchError);
-      
-      // Se la rete non è configurata (codice 4902), aggiungila
-      const errCode = switchError?.data?.originalError?.code ?? switchError.code;
-      if (errCode !== 4001) {
-        try {
-          console.log('➕ Rete Amoy non configurata, aggiungendo...');
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [amoyNetwork],
-          });
-          console.log('✅ Rete Amoy aggiunta con successo');
-          
-          // Aspetta un momento per assicurarsi che la rete sia stata aggiunta
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Dopo aver aggiunto la rete, passa ad essa con più tentativi
-          let switchSuccess = false;
-          for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-              console.log(`🔄 Tentativo ${attempt}/3 di passaggio alla rete appena aggiunta...`);
-              await window.ethereum.request({
-                method: 'wallet_switchEthereumChain',
-                params: [{ chainId: amoyChainId }],
-              });
-              console.log('✅ Passato con successo alla rete Amoy dopo l\'aggiunta');
-              alert('Rete Amoy aggiunta e passaggio completato! Ora puoi vedere il tuo saldo.');
-              switchSuccess = true;
-              break;
-            } catch (retryError) {
-              console.warn(`⚠️ Tentativo ${attempt} fallito:`, retryError.message);
-              if (attempt < 3) {
-                // Aspetta prima del prossimo tentativo
-                await new Promise(resolve => setTimeout(resolve, 2000));
-              }
-            }
-          }
-          
-          if (!switchSuccess) {
-            console.error('❌ Tutti i tentativi di passaggio sono falliti');
-            alert(`⚠️ RETE AGGIUNTA MA NON CAMBIATA!\n\nLa rete Polygon Amoy è stata aggiunta a MetaMask, ma il passaggio automatico è fallito.\n\n🔧 AZIONE RICHIESTA:\n1. Apri MetaMask\n2. Clicca sulla rete corrente (${currentNetworkName})\n3. Seleziona "Polygon Amoy Testnet"\n4. Torna qui per vedere il tuo saldo\n\nUna volta cambiata la rete, la pagina si aggiornerà automaticamente.`);
-          }
-        } catch (addError) {
-          console.error('❌ Errore nell\'aggiunta della rete:', addError);
-          alert('Errore nell\'aggiunta della rete Amoy: ' + addError.message);
-        }
-      } else {
-        console.log('🚫 Operazione annullata dall\'utente');
-        alert('Operazione annullata dall\'utente');
-      }
+      const ok = await ensureAmoy();
+      if (!ok) alert('Rete Amoy non attiva o nodo non raggiungibile. Approva le richieste di MetaMask e riprova.');
+    } catch (e) {
+      const code = e?.data?.originalError?.code ?? e?.code;
+      if (code !== 4001) alert('Cambio rete non riuscito: ' + (e?.message || e));
     }
   };
 
@@ -250,6 +188,8 @@ export const useWallet = () => {
       };
 
       window.ethereum.on('accountsChanged', handleAccountsChanged);
+      // Al caricamento: collega MetaMask e sistema la rete Amoy da solo
+      connectWallet();
       window.ethereum.on('chainChanged', handleChainChanged);
 
       return () => {
