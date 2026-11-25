@@ -26,17 +26,15 @@ export const useGoldPrice = () => {
 
     try {
       // Prova prima con un'API più semplice e affidabile
-      const response = await axios.get('https://api.coinbase.com/v2/exchange-rates?currency=XAU', {
-        timeout: 10000,
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-      
-      if (response.data && response.data.data && response.data.data.rates && response.data.data.rates.USD) {
-        const usdPerOunce = parseFloat(response.data.data.rates.USD);
+      const opts = { timeout: 10000, headers: { 'Accept': 'application/json' } };
+      const [usdRes, eurRes] = await Promise.all([
+        axios.get('https://api.coinbase.com/v2/prices/XAU-USD/spot', opts),
+        axios.get('https://api.coinbase.com/v2/prices/XAU-EUR/spot', opts)
+      ]);
+      if (usdRes.data?.data?.amount && eurRes.data?.data?.amount) {
+        const usdPerOunce = parseFloat(usdRes.data.data.amount);
         const usdPerGram = usdPerOunce / 31.1035; // Conversione da once a grammi
-        const eurPerGram = usdPerGram * 0.85; // Conversione approssimativa USD to EUR
+        const eurPerGram = parseFloat(eurRes.data.data.amount) / 31.1035;
         
         setGoldPrices({
           usdPerOunce: usdPerOunce.toFixed(2),

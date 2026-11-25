@@ -75,7 +75,7 @@ export const useWallet = () => {
         symbol: 'POL',
         decimals: 18,
       },
-      rpcUrls: ['https://rpc-amoy.polygon.technology/'],
+      rpcUrls: ['https://polygon-amoy-bor-rpc.publicnode.com', 'https://polygon-amoy.drpc.org'],
       blockExplorerUrls: ['https://amoy.polygonscan.com/'],
     };
 
@@ -118,7 +118,8 @@ export const useWallet = () => {
       console.log('❌ Errore nel passaggio alla rete:', switchError);
       
       // Se la rete non è configurata (codice 4902), aggiungila
-      if (switchError.code === 4902) {
+      const errCode = switchError?.data?.originalError?.code ?? switchError.code;
+      if (errCode !== 4001) {
         try {
           console.log('➕ Rete Amoy non configurata, aggiungendo...');
           await window.ethereum.request({
@@ -160,12 +161,9 @@ export const useWallet = () => {
           console.error('❌ Errore nell\'aggiunta della rete:', addError);
           alert('Errore nell\'aggiunta della rete Amoy: ' + addError.message);
         }
-      } else if (switchError.code === 4001) {
+      } else {
         console.log('🚫 Operazione annullata dall\'utente');
         alert('Operazione annullata dall\'utente');
-      } else {
-        console.error('❌ Errore sconosciuto:', switchError);
-        alert(`⚠️ IMPOSSIBILE CAMBIARE RETE AUTOMATICAMENTE!\n\nErrore: ${switchError.message}\n\n🔧 AZIONE RICHIESTA:\n1. Apri MetaMask\n2. Clicca sulla rete corrente (${currentNetworkName})\n3. Seleziona "Polygon Amoy Testnet"\n4. Torna qui per vedere il tuo saldo\n\nUna volta cambiata la rete, la pagina si aggiornerà automaticamente.`);
       }
     }
   };
