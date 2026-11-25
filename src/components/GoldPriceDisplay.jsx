@@ -59,7 +59,7 @@ const GoldPriceDisplay = ({ goldPrices, isLoading, error, refreshPrices, isConne
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <span>COINBASE</span>
+        <span>Fonte: Coinbase, prezzo spot XAU (<a href="https://api.coinbase.com/v2/prices/XAU-USD/spot" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ige-gold)' }}>USD</a>, <a href="https://api.coinbase.com/v2/prices/XAU-EUR/spot" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ige-gold)' }}>EUR</a>). 1 oncia = 31,1035 g</span>
         {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
           <span style={{ color: 'var(--ige-gold)', fontSize: '8px' }}>
             📱 Mobile
