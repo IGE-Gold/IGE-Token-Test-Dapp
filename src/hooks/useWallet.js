@@ -19,6 +19,20 @@ const walletRpcWorks = async () => {
     return true;
   } catch { return false; }
 };
+// MetaMask rejects addEthereumChain if the symbol differs from the one already saved (POL vs MATIC)
+const addAmoy = async () => {
+  let lastErr;
+  for (const sym of ['POL', 'MATIC']) {
+    try {
+      await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{ ...AMOY, nativeCurrency: { name: sym, symbol: sym, decimals: 18 } }] });
+      return;
+    } catch (e) {
+      lastErr = e;
+      if (!/symbol/i.test(e?.message || '')) throw e;
+    }
+  }
+  throw lastErr;
+};
 export const ensureAmoy = async () => {
   if (!window.ethereum) return false;
   let chainId = await window.ethereum.request({ method: 'eth_chainId' });
@@ -28,13 +42,13 @@ export const ensureAmoy = async () => {
     } catch (e) {
       const code = e?.data?.originalError?.code ?? e?.code;
       if (code === 4001) return false;
-      await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [AMOY] });
+      await addAmoy();
     }
     chainId = await window.ethereum.request({ method: 'eth_chainId' });
   }
   if (chainId === AMOY.chainId && !(await walletRpcWorks())) {
     // Same chainId with a working RPC: MetaMask asks to add/use the new endpoint
-    await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [AMOY] });
+    await addAmoy();
   }
   return (await window.ethereum.request({ method: 'eth_chainId' })) === AMOY.chainId && (await walletRpcWorks());
 };
