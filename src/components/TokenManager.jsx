@@ -1,4 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
+
+// Admin (owner) known for each contract; verified on-chain with hasRole(DEFAULT_ADMIN_ROLE)
+const KNOWN_OWNERS = {
+  '0x851419ea766ff99e79039637f14e0b71d545062d': '0x2D6eCb55771f262f99F9dF8163910B1968a7862F',
+};
+const AMOY_RPC = 'https://polygon-amoy-bor-rpc.publicnode.com';
 import { Coins, Plus, Minus, RefreshCw, Wallet } from 'lucide-react';
 import TransactionLogger from './TransactionLogger';
 import TransactionOverlay from './TransactionOverlay';
@@ -24,6 +31,27 @@ const TokenManager = ({
   const [burnFromAddress, setBurnFromAddress] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [transactionDetails, setTransactionDetails] = useState(null);
+  const [owner, setOwner] = useState({ address: null, verified: null });
+
+  useEffect(() => {
+    const candidate = KNOWN_OWNERS[(contractAddress || '').toLowerCase()];
+    if (!candidate) { setOwner({ address: null, verified: null }); return; }
+    let cancelled = false;
+    setOwner({ address: candidate, verified: null });
+    (async () => {
+      try {
+        const provider = new ethers.JsonRpcProvider(AMOY_RPC);
+        const c = new ethers.Contract(contractAddress, ['function hasRole(bytes32,address) view returns (bool)'], provider);
+        const ok = await c.hasRole(ethers.ZeroHash, candidate);
+        if (!cancelled) setOwner({ address: candidate, verified: ok });
+      } catch (e) {
+        if (!cancelled) setOwner({ address: candidate, verified: null });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [contractAddress]);
+
+  const isOwnerConnected = !!(owner.address && account && owner.address.toLowerCase() === account.toLowerCase());
 
   // Imposta l'indirizzo predefinito quando l'account cambia
   React.useEffect(() => {
@@ -132,6 +160,17 @@ const TokenManager = ({
           placeholder="0x..."
           style={{ fontFamily: 'Courier New, monospace' }}
         />
+      </div>
+
+
+      {/* Owner (admin) del contratto */}
+      <div style={{ marginBottom: '16px', padding: '10px 14px', borderRadius: '8px', fontFamily: 'Courier New, monospace', wordBreak: 'break-all',
+        border: isOwnerConnected ? '2px solid #22c55e' : '1px solid #555', background: isOwnerConnected ? 'rgba(34,197,94,0.15)' : 'transparent', color: isOwnerConnected ? '#22c55e' : 'inherit' }}>
+        <div style={{ fontFamily: 'inherit', fontSize: '12px', opacity: 0.8 }}>
+          Owner (admin) del contratto{owner.verified === true ? ' · verificato on-chain' : owner.verified === false ? ' · NON confermato on-chain' : ''}
+        </div>
+        <div>{owner.address || 'non noto per questo contratto'}</div>
+        {isOwnerConnected && <div style={{ fontSize: '12px', marginTop: '4px' }}>✓ Sei collegato con il wallet owner</div>}
       </div>
 
       {/* Avviso rete sbagliata */}
